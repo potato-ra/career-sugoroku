@@ -1,5 +1,7 @@
 import express from "express";
 import { createServer } from "node:http";
+import fs from "node:fs";
+import path from "node:path";
 import { Server } from "socket.io";
 import { BOT_NAMES, runBotEndTurn, runBotRoll } from "../lib/botEngine";
 import {
@@ -25,9 +27,11 @@ import { cloneBoard, loadLatestBoardSnapshot, loadStaticGameData } from "./data"
 const PORT = Number(process.env.PORT ?? 3001);
 const app = express();
 const httpServer = createServer(app);
+const distPath = path.join(process.cwd(), "dist");
+const indexPath = path.join(distPath, "index.html");
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: process.env.NODE_ENV === "production" ? undefined : "*",
   },
 });
 
@@ -36,8 +40,24 @@ const rooms = new Map<string, RoomState>();
 const socketRoomMap = new Map<string, { roomId: string; actorId: string; role: "facilitator" | "player" }>();
 const botTimers = new Map<string, NodeJS.Timeout[]>();
 
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("cwd:", process.cwd());
+console.log("distPath:", distPath);
+console.log("indexPath:", indexPath);
+console.log("indexExists:", fs.existsSync(indexPath));
+
+app.use((req, _res, next) => {
+  console.log(`[REQ] ${req.method} ${req.url}`);
+  next();
+});
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
+});
+
+app.get("/", (_req, res) => {
+  console.log("route hit: /");
+  res.status(200).send("ROOT_OK_v1");
 });
 
 const emitRoomState = (roomId: string, room: RoomState) => {

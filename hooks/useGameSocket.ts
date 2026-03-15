@@ -2,7 +2,17 @@ import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { RoomState } from "../lib/types";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL ?? "http://localhost:3001";
+const getServerUrl = () => {
+  if (import.meta.env.VITE_SERVER_URL) {
+    return import.meta.env.VITE_SERVER_URL;
+  }
+
+  if (import.meta.env.DEV) {
+    return "http://localhost:3001";
+  }
+
+  return window.location.origin;
+};
 
 export interface JoinPayload {
   roomId: string;
@@ -28,7 +38,7 @@ export const useGameSocket = () => {
   const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
-    const socket = io(SERVER_URL, { transports: ["websocket"] });
+    const socket = io(getServerUrl(), { transports: ["websocket"] });
     socketRef.current = socket;
 
     socket.on("room:state", (nextRoom: RoomState) => {

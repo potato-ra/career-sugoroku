@@ -59,6 +59,18 @@ npm run dev
 - フロントエンド: [http://localhost:5173](http://localhost:5173)
 - サーバー: [http://localhost:3001](http://localhost:3001)
 
+## Render公開
+
+- 1サービス構成で公開できます
+- `npm run build` で Vite の本番フロント資産を `dist/` に生成します
+- `npm run start` で Express + Socket.IO サーバーが起動し、`dist/` をそのまま配信します
+- 本番ではクライアントの WebSocket 接続先は `window.location.origin` ベースで自動決定されます
+
+Render の設定値:
+
+- Build Command: `npm install && npm run build`
+- Start Command: `npm run start`
+
 ## 遊び方
 
 1. 1人目がルームIDと名前を入れてルームを作成します
