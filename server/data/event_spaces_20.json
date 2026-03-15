@@ -1,0 +1,144 @@
+[
+  {
+    "id": "e01",
+    "title": "強みギフト",
+    "description": "他のプレイヤー全員が、あなたに合いそうな強みカード候補を1つずつ言い、その中から1枚を選んで追加する",
+    "eventType": "strength",
+    "effectType": "strength_feedback"
+  },
+  {
+    "id": "e02",
+    "title": "第一印象の強み",
+    "description": "右隣のプレイヤーが、今のあなたに感じる強みを1つ伝え、強みカードを1枚渡す",
+    "eventType": "strength",
+    "effectType": "strength_feedback"
+  },
+  {
+    "id": "e03",
+    "title": "意外な才能",
+    "description": "山札から強みカードをランダムで1枚引き、その強みが自分に当てはまるかを話す。当てはまるなら保持、違うなら他プレイヤー1人に渡す",
+    "eventType": "strength",
+    "effectType": "strength_random"
+  },
+  {
+    "id": "e04",
+    "title": "強みアップデート",
+    "description": "自分の手元の強みカード1枚を見直し、「今の自分にもっと近い」と思う別の1枚に交換してよい",
+    "eventType": "strength",
+    "effectType": "strength_update"
+  },
+  {
+    "id": "e05",
+    "title": "みんなの推薦",
+    "description": "他プレイヤーが相談して、あなたに最も合いそうな強みカードを1枚選んで追加する",
+    "eventType": "strength",
+    "effectType": "strength_feedback"
+  },
+  {
+    "id": "e06",
+    "title": "キャリア再発見",
+    "description": "自分の職業カードの中から「今いちばん気になる1枚」を選び直し、その理由を話す",
+    "eventType": "career",
+    "effectType": "career_choice"
+  },
+  {
+    "id": "e07",
+    "title": "思い切って交換",
+    "description": "自分の職業カード1枚を手放し、新しく1枚引く。残すか交換するかは自分で決める",
+    "eventType": "career",
+    "effectType": "card_swap"
+  },
+  {
+    "id": "e08",
+    "title": "他己キャリア提案",
+    "description": "他のプレイヤー1人が、あなたに合いそうな職業カードを1枚選ぶ。受け取るかどうかは自分で決める",
+    "eventType": "career",
+    "effectType": "career_feedback"
+  },
+  {
+    "id": "e09",
+    "title": "キャリア分岐",
+    "description": "「安定」「挑戦」「専門性」の3択から1つ選び、その方向に合う職業カードを1枚追加で選ぶ",
+    "eventType": "career",
+    "effectType": "career_choice"
+  },
+  {
+    "id": "e10",
+    "title": "偶然の出会い",
+    "description": "職業カードをランダムで1枚引く。その職業のどこに可能性を感じるかを一言で話す",
+    "eventType": "career",
+    "effectType": "draw_card"
+  },
+  {
+    "id": "e11",
+    "title": "深掘りインタビュー",
+    "description": "これまでに出た話や受け取ったカードをふまえて、他プレイヤー1人から仕事観や将来像について追加質問を2つしてもらう",
+    "eventType": "dialogue",
+    "effectType": "deepen"
+  },
+  {
+    "id": "e12",
+    "title": "価値観トーク",
+    "description": "「やりがい」「収入」「安定」「自由」から1つ選び、それを大事にする理由を話す",
+    "eventType": "dialogue",
+    "effectType": "reflection"
+  },
+  {
+    "id": "e13",
+    "title": "転機シェア",
+    "description": "これまでの人生で印象に残っている転機を1つ話し、他プレイヤーが気づいた強みを返す",
+    "eventType": "dialogue",
+    "effectType": "reflection"
+  },
+  {
+    "id": "e14",
+    "title": "もしも質問",
+    "description": "「制約がなければどんな働き方をしたい？」に答え、他のプレイヤーが1人1コメント返す",
+    "eventType": "dialogue",
+    "effectType": "future_talk"
+  },
+  {
+    "id": "e15",
+    "title": "共通点さがし",
+    "description": "全員で今のプレイヤーとの共通点を1つずつ探し、最後に本人が一番うれしかったものを選ぶ",
+    "eventType": "dialogue",
+    "effectType": "group"
+  },
+  {
+    "id": "e16",
+    "title": "もう一歩前へ",
+    "description": "サイコロを振り、偶数なら1マス進む、奇数ならその場で強みカードを1枚引く",
+    "eventType": "game",
+    "effectType": "advance",
+    "advanceBy": 1
+  },
+  {
+    "id": "e17",
+    "title": "カードシャッフル",
+    "description": "自分の職業カードを1枚選び、山札の上1枚と交換するかどうかを決める",
+    "eventType": "game",
+    "effectType": "card_swap"
+  },
+  {
+    "id": "e18",
+    "title": "応援ブースト",
+    "description": "他プレイヤー2人以上から応援コメントをもらえたら1マス進む",
+    "eventType": "game",
+    "effectType": "advance",
+    "advanceBy": 1
+  },
+  {
+    "id": "e19",
+    "title": "ランダムトレード",
+    "description": "サイコロを振り、出た目が偶数なら職業カード1枚をランダム交換、奇数なら強みカード1枚を自分で選んで誰かに渡す",
+    "eventType": "game",
+    "effectType": "random_trade"
+  },
+  {
+    "id": "e20",
+    "title": "選べるボーナス",
+    "description": "「1マス進む」「強みカードを1枚引く」「職業カードを1枚交換する」から1つ選ぶ",
+    "eventType": "game",
+    "effectType": "choice_bonus"
+  }
+]

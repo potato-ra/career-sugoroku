@@ -1,0 +1,53 @@
+{
+  "roomId": "sample-room",
+  "facilitatorId": "p1",
+  "players": [
+    {
+      "id": "p1",
+      "name": "ファシリ",
+      "color": "#ef4444",
+      "position": 1,
+      "careerCardIds": [
+        1,
+        14,
+        22,
+        35,
+        43
+      ]
+    },
+    {
+      "id": "p2",
+      "name": "プレイヤーA",
+      "color": "#3b82f6",
+      "position": 1,
+      "careerCardIds": [
+        6,
+        18,
+        24,
+        32,
+        47
+      ]
+    },
+    {
+      "id": "p3",
+      "name": "プレイヤーB",
+      "color": "#10b981",
+      "position": 1,
+      "careerCardIds": [
+        3,
+        12,
+        27,
+        39,
+        48
+      ]
+    }
+  ],
+  "currentTurnPlayerId": "p1",
+  "usedQuestionIds": [],
+  "usedEventIds": [],
+  "logs": [],
+  "settings": {
+    "endCondition": "time_or_first_goal",
+    "durationMinutes": 90
+  }
+}
