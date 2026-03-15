@@ -57,7 +57,28 @@ app.get("/health", (_req, res) => {
 
 app.get("/", (_req, res) => {
   console.log("route hit: /");
-  res.status(200).send("ROOT_OK_v1");
+
+  if (!fs.existsSync(indexPath)) {
+    console.error("index.html not found:", indexPath);
+    res.status(500).send(`INDEX_MISSING: ${indexPath}`);
+    return;
+  }
+
+  res.sendFile(indexPath);
+});
+
+app.use(express.static(distPath));
+
+app.get("*", (_req, res) => {
+  console.log("route hit: fallback *");
+
+  if (!fs.existsSync(indexPath)) {
+    console.error("index.html not found:", indexPath);
+    res.status(500).send(`INDEX_MISSING: ${indexPath}`);
+    return;
+  }
+
+  res.sendFile(indexPath);
 });
 
 const emitRoomState = (roomId: string, room: RoomState) => {
