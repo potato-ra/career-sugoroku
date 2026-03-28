@@ -10,6 +10,7 @@ import type {
   SpaceType,
   StrengthCard,
   StrengthGift,
+  TurnOrderRoll,
   TurnResolution,
 } from "./types";
 
@@ -145,6 +146,7 @@ export const createRoomState = (roomId: string, board: BoardSpace[], boardVersio
   roomId,
   boardVersion,
   players: [],
+  turnOrderRolls: [],
   currentTurnIndex: 0,
   started: false,
   endedAt: null,
@@ -210,6 +212,7 @@ export const startGame = (room: RoomState, data: DataBundle): RoomState => {
   return {
     ...room,
     players: nextPlayers,
+    turnOrderRolls: [],
     started: true,
     endedAt: null,
     endedByName: null,
@@ -222,6 +225,70 @@ export const startGame = (room: RoomState, data: DataBundle): RoomState => {
     winnerId: null,
     logs: [createLog("ゲームを開始しました"), ...room.logs],
   };
+};
+
+export const setPlayOrder = (room: RoomState, orderedPlayerIds: string[]): RoomState => {
+  if (orderedPlayerIds.length !== room.players.length) {
+    return room;
+  }
+
+  const seen = new Set(orderedPlayerIds);
+  if (seen.size !== room.players.length) {
+    return room;
+  }
+
+  const playerMap = new Map(room.players.map((player) => [player.id, player]));
+  const orderedPlayers = orderedPlayerIds
+    .map((playerId) => playerMap.get(playerId))
+    .filter((player): player is Player => Boolean(player));
+
+  if (orderedPlayers.length !== room.players.length) {
+    return room;
+  }
+
+  const currentPlayerId = room.players[room.currentTurnIndex]?.id;
+  const nextTurnIndex = currentPlayerId ? Math.max(0, orderedPlayers.findIndex((player) => player.id === currentPlayerId)) : 0;
+
+  return appendLog(
+    {
+      ...room,
+      players: orderedPlayers,
+      turnOrderRolls: [],
+      currentTurnIndex: nextTurnIndex,
+    },
+    `手番順を ${orderedPlayers.map((player) => player.name).join(" → ")} に変更しました`,
+  );
+};
+
+export const rollTurnOrderDice = (room: RoomState): RoomState => {
+  const indexedPlayers = room.players.map((player, index) => ({
+    player,
+    index,
+    dice: Math.floor(Math.random() * 6) + 1,
+  }));
+
+  const turnOrderRolls: TurnOrderRoll[] = indexedPlayers.map(({ player, dice }) => ({
+    playerId: player.id,
+    playerName: player.name,
+    dice,
+  }));
+
+  const sortedPlayers = [...indexedPlayers]
+    .sort((left, right) => (right.dice - left.dice) || (left.index - right.index))
+    .map((entry) => entry.player);
+
+  const currentPlayerId = room.players[room.currentTurnIndex]?.id;
+  const nextTurnIndex = currentPlayerId ? Math.max(0, sortedPlayers.findIndex((player) => player.id === currentPlayerId)) : 0;
+
+  return appendLog(
+    {
+      ...room,
+      players: sortedPlayers,
+      turnOrderRolls,
+      currentTurnIndex: nextTurnIndex,
+    },
+    `順番決めサイコロの結果: ${turnOrderRolls.map((roll) => `${roll.playerName}=${roll.dice}`).join(" / ")}`,
+  );
 };
 
 export const endGame = (room: RoomState, actorId: string): RoomState => {

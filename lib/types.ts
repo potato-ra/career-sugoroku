@@ -78,10 +78,17 @@ export interface GameLog {
   createdAt: string;
 }
 
+export interface TurnOrderRoll {
+  playerId: string;
+  playerName: string;
+  dice: number;
+}
+
 export interface RoomState {
   roomId: string;
   boardVersion: string;
   players: Player[];
+  turnOrderRolls: TurnOrderRoll[];
   currentTurnIndex: number;
   started: boolean;
   endedAt: string | null;

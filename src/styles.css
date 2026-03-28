@@ -359,6 +359,41 @@ label {
   border: 1px solid #dbeafe;
 }
 
+.facilitator-control-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.order-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #dbeafe;
+}
+
+.order-dice-results {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+}
+
+.order-dice-results p {
+  margin: 4px 0;
+}
+
 .board-debug-panel p {
   margin: 6px 0 0;
   font-family: "SFMono-Regular", "Menlo", monospace;

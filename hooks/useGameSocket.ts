@@ -193,6 +193,44 @@ export const useGameSocket = () => {
     }
   };
 
+  const setPlayerOrder = async (orderedPlayerIds: string[]) => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("game:setOrder", { roomId: room.roomId, playerId, orderedPlayerIds });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "順番変更に失敗しました。");
+    }
+  };
+
+  const rollTurnOrderDice = async () => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("game:rollOrderDice", { roomId: room.roomId, playerId });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "順番決めサイコロに失敗しました。");
+    }
+  };
+
+  const movePlayer = async (targetPlayerId: string, position: number) => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("game:movePlayer", {
+      roomId: room.roomId,
+      playerId,
+      targetPlayerId,
+      position,
+    });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "プレイヤー移動に失敗しました。");
+    }
+  };
+
   const drawEvent = async () => {
     if (!room || !playerId) {
       return;
@@ -272,6 +310,9 @@ export const useGameSocket = () => {
     rollDice,
     endTurn,
     closeGame,
+    setPlayerOrder,
+    rollTurnOrderDice,
+    movePlayer,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,

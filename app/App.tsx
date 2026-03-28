@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BoardDebugPanel } from "../components/BoardDebugPanel";
 import { DeveloperPanel } from "../components/DeveloperPanel";
 import { EventModal } from "../components/EventModal";
+import { FacilitatorControlPanel } from "../components/FacilitatorControlPanel";
 import { GameBoard } from "../components/GameBoard";
 import { HelpPanel } from "../components/HelpPanel";
 import { Lobby } from "../components/Lobby";
@@ -22,6 +23,9 @@ export const App = () => {
     rollDice,
     endTurn,
     closeGame,
+    setPlayerOrder,
+    rollTurnOrderDice,
+    movePlayer,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,
@@ -236,6 +240,15 @@ export const App = () => {
         focusedPlayerId={viewMode === "player" ? viewedPlayer?.id : undefined}
         title={viewMode === "facilitator" ? "PlayerPanel" : "プレイヤー視点パネル"}
       />
+
+      {showFacilitatorControls ? (
+        <FacilitatorControlPanel
+          room={room}
+          onSetPlayerOrder={(orderedPlayerIds) => void setPlayerOrder(orderedPlayerIds)}
+          onRollTurnOrderDice={() => void rollTurnOrderDice()}
+          onMovePlayer={(targetPlayerId, position) => void movePlayer(targetPlayerId, position)}
+        />
+      ) : null}
 
       {showFacilitatorControls ? (
         <StrengthCardPanel

@@ -6,7 +6,9 @@ import {
   createRoomState,
   drawEventForCurrentPlayer,
   giveRandomStrengthCard,
+  rollTurnOrderDice,
   resolveTurn,
+  setPlayOrder,
   startGame,
 } from "../lib/gameEngine";
 import { gameData } from "../lib/gameData";
@@ -125,5 +127,31 @@ describe("gameEngine", () => {
     expect(afterTarget?.strengthCards.length).toBe(4);
     expect(updated.usedStrengthCardIds.length).toBe(started.usedStrengthCardIds.length + 1);
     expect(updated.strengthGiftHistory.length).toBe(1);
+  });
+
+  it("can reorder players manually without losing the current turn player", () => {
+    const room = createRoomState("room-order", gameData.board, boardVersion);
+    const playerA = addPlayerToRoom(room, "A", "socket-a");
+    const playerB = addPlayerToRoom(room, "B", "socket-b");
+    const playerC = addPlayerToRoom(room, "C", "socket-c");
+    const started = startGame(room, gameData);
+
+    const advanced = advanceTurn(started);
+    expect(advanced.players[advanced.currentTurnIndex]?.id).toBe(playerB.id);
+
+    const reordered = setPlayOrder(advanced, [playerC.id, playerB.id, playerA.id]);
+    expect(reordered.players.map((player) => player.id)).toEqual([playerC.id, playerB.id, playerA.id]);
+    expect(reordered.players[reordered.currentTurnIndex]?.id).toBe(playerB.id);
+  });
+
+  it("rolls order dice and stores one result per player", () => {
+    const room = createRoomState("room-order-dice", gameData.board, boardVersion);
+    addPlayerToRoom(room, "A", "socket-a");
+    addPlayerToRoom(room, "B", "socket-b");
+    addPlayerToRoom(room, "C", "socket-c");
+
+    const updated = rollTurnOrderDice(room);
+    expect(updated.turnOrderRolls).toHaveLength(3);
+    expect(updated.turnOrderRolls.every((roll) => roll.dice >= 1 && roll.dice <= 6)).toBe(true);
   });
 });

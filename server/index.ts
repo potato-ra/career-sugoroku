@@ -17,7 +17,9 @@ import {
   giveStrengthCard,
   movePlayerToPosition,
   resolveTurn,
+  rollTurnOrderDice,
   setActiveResolution,
+  setPlayOrder,
   setCurrentTurnPlayer,
   startGame,
   undoStrengthGift,
@@ -441,6 +443,67 @@ io.on("connection", (socket) => {
 
     const nextRoom = endGame(room, playerId);
     clearBotTimers(roomId);
+    emitRoomState(roomId, nextRoom);
+    callback?.({ ok: true });
+  });
+
+  socket.on("game:setOrder", ({ roomId, playerId, orderedPlayerIds }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "順番変更はファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    const nextRoom = setPlayOrder(room, Array.isArray(orderedPlayerIds) ? orderedPlayerIds : []);
+    if (nextRoom === room) {
+      callback?.({ ok: false, message: "順番を更新できませんでした。" });
+      return;
+    }
+
+    emitRoomState(roomId, nextRoom);
+    callback?.({ ok: true });
+  });
+
+  socket.on("game:rollOrderDice", ({ roomId, playerId }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "順番決めサイコロはファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    const nextRoom = rollTurnOrderDice(room);
+    emitRoomState(roomId, nextRoom);
+    callback?.({ ok: true });
+  });
+
+  socket.on("game:movePlayer", ({ roomId, playerId, targetPlayerId, position }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "プレイヤー移動はファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    if (!targetPlayerId || typeof position !== "number") {
+      callback?.({ ok: false, message: "移動対象と移動先を指定してください。" });
+      return;
+    }
+
+    const nextRoom = movePlayerToPosition(room, String(targetPlayerId), Number(position));
     emitRoomState(roomId, nextRoom);
     callback?.({ ok: true });
   });
