@@ -13,6 +13,12 @@ const RULE_TEXT = [
   "このようにして、自己理解と相互理解を深めることが、このゲームのゴールです。積極的に自己開示をしつつ、相手にも興味を持って質問していきましょう。",
 ];
 
+const groupedStrengthCards = strengthCards.reduce<Record<string, typeof strengthCards>>((groups, card) => {
+  const existing = groups[card.category] ?? [];
+  groups[card.category] = [...existing, card];
+  return groups;
+}, {});
+
 export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
   if (!mode) {
     return null;
@@ -36,14 +42,23 @@ export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
           </div>
         ) : (
           <div className="help-body">
-            <div className="strength-reference-grid">
-              {strengthCards.map((card) => (
-                <div key={card.id} className="strength-reference-item">
-                  <strong>{card.text}</strong>
-                  <small>{card.category}</small>
+            {Object.entries(groupedStrengthCards).map(([category, cards]) => (
+              <section key={category} className="strength-reference-section">
+                <div className="section-header">
+                  <h3>{category}</h3>
+                  <p>{cards.length}枚</p>
                 </div>
-              ))}
-            </div>
+                <div className="strength-reference-grid">
+                  {cards.map((card) => (
+                    <div key={card.id} className="strength-reference-item">
+                      <strong>
+                        {card.id}. {card.text}
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
         )}
       </section>
