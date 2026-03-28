@@ -444,6 +444,11 @@ label {
   gap: 10px;
 }
 
+.guide-subsection {
+  display: grid;
+  gap: 10px;
+}
+
 .rule-section h3,
 .rule-section h4 {
   margin: 0;

@@ -12,6 +12,7 @@ import { StrengthCardPanel } from "../components/StrengthCardPanel";
 import { useGameSocket } from "../hooks/useGameSocket";
 
 export const App = () => {
+  const printGuideUrl = "/guide-print.html";
   const {
     room,
     playerId,
@@ -34,7 +35,7 @@ export const App = () => {
   } = useGameSocket();
   const [viewMode, setViewMode] = useState<"facilitator" | "player">("facilitator");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
-  const [helpMode, setHelpMode] = useState<"rules" | "strengths" | null>(null);
+  const [helpMode, setHelpMode] = useState<"guide" | "rules" | "strengths" | null>(null);
 
   useEffect(() => {
     if (!room) {
@@ -107,6 +108,12 @@ export const App = () => {
           <p>ルームを閉じました。ご参加ありがとうございました。</p>
           <p>{room.endedByName ? `${room.endedByName} がゲームを終了しました。` : "ゲームを終了しました。"}</p>
           <div className="inline-actions">
+            <button type="button" className="secondary" onClick={() => window.open(printGuideUrl, "_blank", "noopener,noreferrer")}>
+              印刷用資料
+            </button>
+            <button type="button" className="secondary" onClick={() => setHelpMode("guide")}>
+              配布ガイド
+            </button>
             <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
               ルール
             </button>
@@ -150,6 +157,12 @@ export const App = () => {
             />
           ) : null}
           <div className="inline-actions">
+            <button type="button" className="secondary" onClick={() => window.open(printGuideUrl, "_blank", "noopener,noreferrer")}>
+              印刷用資料
+            </button>
+            <button type="button" className="secondary" onClick={() => setHelpMode("guide")}>
+              配布ガイド
+            </button>
             <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
               ルール
             </button>

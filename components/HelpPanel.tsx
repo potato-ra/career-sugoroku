@@ -1,7 +1,9 @@
 import strengthCards from "../data/strength_cards.json";
+import eventCards from "../data/event_spaces_20.json";
+import careerCards from "../data/career_cards.json";
 
 interface HelpPanelProps {
-  mode: "rules" | "strengths" | null;
+  mode: "guide" | "rules" | "strengths" | null;
   onClose: () => void;
 }
 
@@ -11,22 +13,152 @@ const groupedStrengthCards = strengthCards.reduce<Record<string, typeof strength
   return groups;
 }, {});
 
+const groupedCareerCards = careerCards.reduce<Record<string, typeof careerCards>>((groups, card) => {
+  const existing = groups[card.category] ?? [];
+  groups[card.category] = [...existing, card];
+  return groups;
+}, {});
+
+const groupedEventCards = eventCards.reduce<Record<string, typeof eventCards>>((groups, card) => {
+  const existing = groups[card.eventType] ?? [];
+  groups[card.eventType] = [...existing, card];
+  return groups;
+}, {});
+
+const eventTypeLabels: Record<string, string> = {
+  strength: "強み発見系",
+  career: "キャリア転機系",
+  dialogue: "対話深化系",
+  game: "ゲーム性イベント",
+};
+
 export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
   if (!mode) {
     return null;
   }
 
+  const title =
+    mode === "guide" ? "配布ガイド" : mode === "rules" ? "ルール" : "強みカード一覧";
+
   return (
     <div className="help-overlay" role="dialog" aria-modal="true">
       <section className="panel help-panel">
         <div className="section-header">
-          <h2>{mode === "rules" ? "ルール" : "強みカード一覧"}</h2>
+          <h2>{title}</h2>
           <button type="button" className="secondary" onClick={onClose}>
             閉じる
           </button>
         </div>
 
-        {mode === "rules" ? (
+        {mode === "guide" ? (
+          <div className="help-body">
+            <section className="rule-section">
+              <h3>1. ルール</h3>
+              <p>勝ち負けを競うゲームではなく、対話を通じて価値観や強みを再発見するワークショップ型ゲームです。</p>
+              <ul className="help-list">
+                <li>質問マスでは、自分の考えや経験を話します。</li>
+                <li>他者質問マスでは、他のプレイヤーに質問します。</li>
+                <li>ほめ活マスでは、相手の強みや良さを言葉にします。</li>
+                <li>イベントマスでは、イベントカードを引いて進めます。</li>
+                <li>最後に、強み・理由・似合いそうな職業を伝え合って締めくくります。</li>
+              </ul>
+            </section>
+
+            <section className="rule-section">
+              <h3>2. イベントカード一覧</h3>
+              {Object.entries(groupedEventCards).map(([eventType, cards]) => (
+                <div key={eventType} className="guide-subsection">
+                  <h4>{eventTypeLabels[eventType] ?? eventType}</h4>
+                  <div className="help-table-wrap">
+                    <table className="help-table">
+                      <thead>
+                        <tr>
+                          <th>イベント名</th>
+                          <th>内容</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cards.map((card) => (
+                          <tr key={card.id}>
+                            <td>{card.title}</td>
+                            <td>{card.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="rule-section">
+              <h3>3. 強みカード一覧</h3>
+              {Object.entries(groupedStrengthCards).map(([category, cards]) => (
+                <div key={category} className="guide-subsection">
+                  <h4>{category}</h4>
+                  <div className="strength-reference-grid">
+                    {cards.map((card) => (
+                      <div key={card.id} className="strength-reference-item">
+                        <strong>
+                          {card.id}. {card.text}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="rule-section">
+              <h3>4. 職業カード一覧</h3>
+              {Object.entries(groupedCareerCards).map(([category, cards]) => (
+                <div key={category} className="guide-subsection">
+                  <h4>{category}</h4>
+                  <div className="help-table-wrap">
+                    <table className="help-table">
+                      <thead>
+                        <tr>
+                          <th>職業</th>
+                          <th>説明</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cards.map((card) => (
+                          <tr key={card.id}>
+                            <td>{card.title}</td>
+                            <td>{card.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
+            </section>
+
+            <section className="rule-section">
+              <h3>5. プレイヤーの操作方法</h3>
+              <ul className="help-list">
+                <li>ロビーでルームに参加します。</li>
+                <li>ゲーム開始前に、必要なら `順番を引く` ボタンで順番くじを引きます。</li>
+                <li>自分の手番になったら `サイコロを振る` を押します。</li>
+                <li>止まったマスの内容に沿って話します。</li>
+                <li>ルールや強みカード一覧が気になったら、右上のボタンからいつでも確認できます。</li>
+              </ul>
+            </section>
+
+            <section className="rule-section">
+              <h3>6. ファシリテーターの操作方法</h3>
+              <ul className="help-list">
+                <li>ルームを作成し、人数がそろったら `ゲーム開始` を押します。</li>
+                <li>必要に応じて、プレイヤーの順番を手動で並び替えます。</li>
+                <li>イベントや強みカード配布、ターン終了を進行します。</li>
+                <li>途中参加や再合流があったら、任意のマスへ移動して調整できます。</li>
+                <li>終了したいタイミングで `ゲーム終了` を押すと、全員に終了画面が表示されます。</li>
+              </ul>
+            </section>
+          </div>
+        ) : mode === "rules" ? (
           <div className="help-body">
             <section className="rule-section">
               <h3>キャリアすごろく プレイガイド</h3>
