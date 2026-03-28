@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
 import type { RoomState } from "../lib/types";
 
+const SESSION_STORAGE_KEY = "career-sugoroku-session";
+
 const getServerUrl = () => {
   if (import.meta.env.VITE_SERVER_URL) {
     return import.meta.env.VITE_SERVER_URL;
@@ -22,6 +24,13 @@ export interface JoinPayload {
   botCount?: number;
 }
 
+interface StoredSession {
+  roomId: string;
+  actorId: string;
+  role: "facilitator" | "player";
+  name: string;
+}
+
 interface ActionResult {
   ok: boolean;
   message?: string;
@@ -37,6 +46,14 @@ export const useGameSocket = () => {
   const [lastDice, setLastDice] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>("");
 
+  const persistSession = (session: StoredSession) => {
+    window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  };
+
+  const clearSession = () => {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  };
+
   useEffect(() => {
     const socket = io(getServerUrl(), { transports: ["websocket"] });
     socketRef.current = socket;
@@ -47,6 +64,39 @@ export const useGameSocket = () => {
 
     socket.on("game:rolled", ({ dice }: { dice: number }) => {
       setLastDice(dice);
+    });
+
+    socket.on("connect", () => {
+      const rawSession = window.localStorage.getItem(SESSION_STORAGE_KEY);
+      if (!rawSession) {
+        return;
+      }
+
+      try {
+        const session = JSON.parse(rawSession) as StoredSession;
+        socket.emit(
+          "room:restore",
+          {
+            roomId: session.roomId,
+            actorId: session.actorId,
+            role: session.role,
+          },
+          (response: ActionResult) => {
+            if (response.ok && response.playerId) {
+              setPlayerId(response.playerId);
+              setRoom(response.room ?? null);
+              setErrorMessage("");
+              return;
+            }
+
+            clearSession();
+            setRoom(null);
+            setPlayerId("");
+          },
+        );
+      } catch {
+        clearSession();
+      }
     });
 
     return () => {
@@ -63,9 +113,16 @@ export const useGameSocket = () => {
 
   const createRoom = async (payload: JoinPayload) => {
     const response = await emitWithAck<ActionResult, JoinPayload>("room:create", payload);
-    if (response.ok && response.playerId) {
+    if (response.ok && response.playerId && response.room) {
       setPlayerId(response.playerId);
       setErrorMessage("");
+      setRoom(response.room);
+      persistSession({
+        roomId: response.room.roomId,
+        actorId: response.playerId,
+        role: payload.isFacilitator ? "facilitator" : "player",
+        name: payload.name,
+      });
     } else {
       setErrorMessage(response.message ?? "ルーム作成に失敗しました。");
     }
@@ -74,9 +131,16 @@ export const useGameSocket = () => {
 
   const joinRoom = async (payload: JoinPayload) => {
     const response = await emitWithAck<ActionResult, JoinPayload>("room:join", payload);
-    if (response.ok && response.playerId) {
+    if (response.ok && response.playerId && response.room) {
       setPlayerId(response.playerId);
       setErrorMessage("");
+      setRoom(response.room);
+      persistSession({
+        roomId: response.room.roomId,
+        actorId: response.playerId,
+        role: payload.isFacilitator ? "facilitator" : "player",
+        name: payload.name,
+      });
     } else {
       setErrorMessage(response.message ?? "ルーム参加に失敗しました。");
     }

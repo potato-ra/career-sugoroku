@@ -39,6 +39,8 @@ const gameData = loadStaticGameData();
 const rooms = new Map<string, RoomState>();
 const socketRoomMap = new Map<string, { roomId: string; actorId: string; role: "facilitator" | "player" }>();
 const botTimers = new Map<string, NodeJS.Timeout[]>();
+const reconnectTimers = new Map<string, NodeJS.Timeout>();
+const RECONNECT_GRACE_MS = 30_000;
 
 console.log("NODE_ENV:", process.env.NODE_ENV);
 console.log("cwd:", process.cwd());
@@ -96,6 +98,25 @@ const clearBotTimers = (roomId: string) => {
   const timers = botTimers.get(roomId) ?? [];
   timers.forEach((timer) => clearTimeout(timer));
   botTimers.delete(roomId);
+};
+
+const clearReconnectTimer = (actorId: string) => {
+  const timer = reconnectTimers.get(actorId);
+  if (!timer) {
+    return;
+  }
+
+  clearTimeout(timer);
+  reconnectTimers.delete(actorId);
+};
+
+const scheduleReconnectExpiry = (actorId: string, callback: () => void) => {
+  clearReconnectTimer(actorId);
+  const timer = setTimeout(() => {
+    reconnectTimers.delete(actorId);
+    callback();
+  }, RECONNECT_GRACE_MS);
+  reconnectTimers.set(actorId, timer);
 };
 
 const findAvailableRoomId = (requestedRoomId: string) => {
@@ -262,6 +283,54 @@ io.on("connection", (socket) => {
     socket.join(nextRoomId);
     emitRoomState(nextRoomId, room);
     callback?.({ ok: true, room, playerId: facilitatorId });
+  });
+
+  socket.on("room:restore", ({ roomId, actorId, role }, callback) => {
+    const trimmedRoomId = (roomId || "").trim().toUpperCase();
+    const room = rooms.get(trimmedRoomId);
+
+    if (!room || !actorId || !role) {
+      callback?.({ ok: false, message: "復元対象のルームが見つかりません。" });
+      return;
+    }
+
+    if (role === "facilitator") {
+      if (room.facilitatorId !== actorId) {
+        callback?.({ ok: false, message: "ファシリテーター情報を復元できませんでした。" });
+        return;
+      }
+
+      clearReconnectTimer(actorId);
+      const nextRoom = {
+        ...room,
+        facilitatorSocketId: socket.id,
+        logs: [createLog("ファシリテーターが再接続しました。"), ...room.logs],
+      };
+      rooms.set(trimmedRoomId, nextRoom);
+      socketRoomMap.set(socket.id, { roomId: trimmedRoomId, actorId, role });
+      socket.join(trimmedRoomId);
+      emitRoomState(trimmedRoomId, nextRoom);
+      callback?.({ ok: true, room: nextRoom, playerId: actorId });
+      return;
+    }
+
+    const targetPlayer = room.players.find((player) => player.id === actorId);
+    if (!targetPlayer) {
+      callback?.({ ok: false, message: "プレイヤー情報を復元できませんでした。" });
+      return;
+    }
+
+    clearReconnectTimer(actorId);
+    const nextRoom = {
+      ...room,
+      players: room.players.map((player) => (player.id === actorId ? { ...player, socketId: socket.id } : player)),
+      logs: [createLog(`${targetPlayer.name} が再接続しました。`), ...room.logs],
+    };
+    rooms.set(trimmedRoomId, nextRoom);
+    socketRoomMap.set(socket.id, { roomId: trimmedRoomId, actorId, role: "player" });
+    socket.join(trimmedRoomId);
+    emitRoomState(trimmedRoomId, nextRoom);
+    callback?.({ ok: true, room: nextRoom, playerId: actorId });
   });
 
   socket.on("room:join", ({ roomId, name }, callback) => {
@@ -525,42 +594,72 @@ io.on("connection", (socket) => {
     }
 
     if (participation.role === "facilitator") {
-      const nextPlayers = room.players.filter((player) => player.socketId !== socket.id);
       const nextRoom: RoomState = {
         ...room,
-        players: nextPlayers,
-        facilitatorId: null,
-        facilitatorName: null,
         facilitatorSocketId: null,
-        logs: [createLog("ファシリテーターが退出しました。"), ...room.logs],
+        logs: [createLog("ファシリテーターの接続が切れました。30秒以内なら再接続できます。"), ...room.logs],
       };
+      emitRoomState(participation.roomId, nextRoom);
+      scheduleReconnectExpiry(participation.actorId, () => {
+        const latestRoom = rooms.get(participation.roomId);
+        if (!latestRoom || latestRoom.facilitatorId !== participation.actorId || latestRoom.facilitatorSocketId) {
+          return;
+        }
 
-      if (nextPlayers.length === 0) {
-        clearBotTimers(participation.roomId);
-        rooms.delete(participation.roomId);
-      } else {
-        emitRoomState(participation.roomId, nextRoom);
-      }
+        const expiredRoom: RoomState = {
+          ...latestRoom,
+          facilitatorId: null,
+          facilitatorName: null,
+          facilitatorSocketId: null,
+          logs: [createLog("ファシリテーターが退出しました。"), ...latestRoom.logs],
+        };
+
+        if (expiredRoom.players.length === 0) {
+          clearBotTimers(participation.roomId);
+          rooms.delete(participation.roomId);
+          return;
+        }
+
+        emitRoomState(participation.roomId, expiredRoom);
+      });
       socketRoomMap.delete(socket.id);
       return;
     }
 
-    const nextPlayers = room.players.filter((player) => player.id !== participation.actorId);
-    const nextTurnIndex = Math.min(room.currentTurnIndex, Math.max(nextPlayers.length - 1, 0));
-
     const nextRoom: RoomState = {
       ...room,
-      players: nextPlayers,
-      currentTurnIndex: nextTurnIndex,
-      logs: [createLog("プレイヤーが退出しました。"), ...room.logs],
+      players: room.players.map((player) => (player.id === participation.actorId ? { ...player, socketId: undefined } : player)),
+      logs: [createLog("プレイヤーの接続が切れました。30秒以内なら再接続できます。"), ...room.logs],
     };
+    emitRoomState(participation.roomId, nextRoom);
+    scheduleReconnectExpiry(participation.actorId, () => {
+      const latestRoom = rooms.get(participation.roomId);
+      if (!latestRoom) {
+        return;
+      }
 
-    if (nextPlayers.length === 0 && !room.facilitatorId) {
-      clearBotTimers(participation.roomId);
-      rooms.delete(participation.roomId);
-    } else {
-      emitRoomState(participation.roomId, nextRoom);
-    }
+      const targetPlayer = latestRoom.players.find((player) => player.id === participation.actorId);
+      if (!targetPlayer || targetPlayer.socketId) {
+        return;
+      }
+
+      const remainingPlayers = latestRoom.players.filter((player) => player.id !== participation.actorId);
+      const nextTurnIndex = Math.min(latestRoom.currentTurnIndex, Math.max(remainingPlayers.length - 1, 0));
+      const expiredRoom: RoomState = {
+        ...latestRoom,
+        players: remainingPlayers,
+        currentTurnIndex: nextTurnIndex,
+        logs: [createLog(`${targetPlayer.name} が退出しました。`), ...latestRoom.logs],
+      };
+
+      if (remainingPlayers.length === 0 && !expiredRoom.facilitatorId) {
+        clearBotTimers(participation.roomId);
+        rooms.delete(participation.roomId);
+        return;
+      }
+
+      emitRoomState(participation.roomId, expiredRoom);
+    });
 
     socketRoomMap.delete(socket.id);
   });

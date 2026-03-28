@@ -3,6 +3,7 @@ import { BoardDebugPanel } from "../components/BoardDebugPanel";
 import { DeveloperPanel } from "../components/DeveloperPanel";
 import { EventModal } from "../components/EventModal";
 import { GameBoard } from "../components/GameBoard";
+import { HelpPanel } from "../components/HelpPanel";
 import { Lobby } from "../components/Lobby";
 import { PlayerPanel } from "../components/PlayerPanel";
 import { RoleSwitcher } from "../components/RoleSwitcher";
@@ -25,10 +26,10 @@ export const App = () => {
     giveRandomStrengthCard,
     undoStrengthGift,
     runDeveloperAction,
-  } =
-    useGameSocket();
+  } = useGameSocket();
   const [viewMode, setViewMode] = useState<"facilitator" | "player">("facilitator");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
+  const [helpMode, setHelpMode] = useState<"rules" | "strengths" | null>(null);
 
   useEffect(() => {
     if (!room) {
@@ -52,13 +53,23 @@ export const App = () => {
     });
   }, [room]);
 
+  const isFacilitator = room?.facilitatorId === playerId;
+
+  useEffect(() => {
+    if (!room || room.isDemoMode) {
+      return;
+    }
+
+    setViewMode(isFacilitator ? "facilitator" : "player");
+  }, [isFacilitator, room]);
+
   if (!room || !playerId) {
     return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} errorMessage={errorMessage} />;
   }
 
   const currentPlayer = room.players.find((player) => player.id === playerId);
   const currentTurnPlayer = room.players[room.currentTurnIndex];
-  const isFacilitator = room.facilitatorId === playerId;
+
   const canStart = room.isDemoMode
     ? room.players.length >= 1 && room.players.length <= 5 && !room.started
     : room.players.length >= 3 && room.players.length <= 5 && !room.started;
@@ -76,6 +87,7 @@ export const App = () => {
 
   const boardCurrentUserId = viewMode === "player" ? viewedPlayer?.id ?? playerId : playerId;
   const showFacilitatorControls = viewMode === "facilitator" && isFacilitator;
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -96,13 +108,23 @@ export const App = () => {
           </div>
         </div>
         <div className="topbar-actions">
-          <RoleSwitcher
-            viewMode={viewMode}
-            onChangeViewMode={setViewMode}
-            selectedPlayerId={viewedPlayer?.id ?? ""}
-            onChangePlayerId={setSelectedPlayerId}
-            players={room.players}
-          />
+          {room.isDemoMode ? (
+            <RoleSwitcher
+              viewMode={viewMode}
+              onChangeViewMode={setViewMode}
+              selectedPlayerId={viewedPlayer?.id ?? ""}
+              onChangePlayerId={setSelectedPlayerId}
+              players={room.players}
+            />
+          ) : null}
+          <div className="inline-actions">
+            <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
+              ルール
+            </button>
+            <button type="button" className="secondary" onClick={() => setHelpMode("strengths")}>
+              強みカード一覧
+            </button>
+          </div>
           <div className="facilitator-badge">{isFacilitator ? "ファシリ操作権あり" : "プレイヤーはサイコロのみ操作"}</div>
           <button onClick={() => void startGame()} disabled={!canStart || !isFacilitator}>
             ゲーム開始
@@ -200,6 +222,8 @@ export const App = () => {
           onUndoStrengthGift={(giftId) => void undoStrengthGift(giftId)}
         />
       ) : null}
+
+      <HelpPanel mode={helpMode} onClose={() => setHelpMode(null)} />
 
       {errorMessage ? <p className="error-text bottom-error">{errorMessage}</p> : null}
     </main>
