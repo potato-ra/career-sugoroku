@@ -65,52 +65,18 @@ export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
             </section>
 
             <section className="rule-section">
-              <h3>2. イベントカード一覧</h3>
-              {Object.entries(groupedEventCards).map(([eventType, cards]) => (
-                <div key={eventType} className="guide-subsection">
-                  <h4>{eventTypeLabels[eventType] ?? eventType}</h4>
-                  <div className="help-table-wrap">
-                    <table className="help-table">
-                      <thead>
-                        <tr>
-                          <th>イベント名</th>
-                          <th>内容</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {cards.map((card) => (
-                          <tr key={card.id}>
-                            <td>{card.title}</td>
-                            <td>{card.description}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              ))}
+              <h3>2. プレイヤーの操作方法</h3>
+              <ul className="help-list">
+                <li>ロビーでルームに参加します。</li>
+                <li>ゲーム開始前に、必要なら `順番を引く` ボタンで順番くじを引きます。</li>
+                <li>自分の手番になったら `サイコロを振る` を押します。</li>
+                <li>止まったマスの内容に沿って話します。</li>
+                <li>ルールや強みカード一覧が気になったら、右上のボタンからいつでも確認できます。</li>
+              </ul>
             </section>
 
             <section className="rule-section">
-              <h3>3. 強みカード一覧</h3>
-              {Object.entries(groupedStrengthCards).map(([category, cards]) => (
-                <div key={category} className="guide-subsection">
-                  <h4>{category}</h4>
-                  <div className="strength-reference-grid">
-                    {cards.map((card) => (
-                      <div key={card.id} className="strength-reference-item">
-                        <strong>
-                          {card.id}. {card.text}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            <section className="rule-section">
-              <h3>4. 職業カード一覧</h3>
+              <h3>3. 職業カード一覧</h3>
               {Object.entries(groupedCareerCards).map(([category, cards]) => (
                 <div key={category} className="guide-subsection">
                   <h4>{category}</h4>
@@ -137,18 +103,25 @@ export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
             </section>
 
             <section className="rule-section">
-              <h3>5. プレイヤーの操作方法</h3>
-              <ul className="help-list">
-                <li>ロビーでルームに参加します。</li>
-                <li>ゲーム開始前に、必要なら `順番を引く` ボタンで順番くじを引きます。</li>
-                <li>自分の手番になったら `サイコロを振る` を押します。</li>
-                <li>止まったマスの内容に沿って話します。</li>
-                <li>ルールや強みカード一覧が気になったら、右上のボタンからいつでも確認できます。</li>
-              </ul>
+              <h3>4. 強みカード一覧</h3>
+              {Object.entries(groupedStrengthCards).map(([category, cards]) => (
+                <div key={category} className="guide-subsection">
+                  <h4>{category}</h4>
+                  <div className="strength-reference-grid">
+                    {cards.map((card) => (
+                      <div key={card.id} className="strength-reference-item">
+                        <strong>
+                          {card.id}. {card.text}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </section>
 
             <section className="rule-section">
-              <h3>6. ファシリテーターの操作方法</h3>
+              <h3>5. ファシリテーターの操作方法</h3>
               <ul className="help-list">
                 <li>ルームを作成し、人数がそろったら `ゲーム開始` を押します。</li>
                 <li>必要に応じて、プレイヤーの順番を手動で並び替えます。</li>
@@ -156,6 +129,33 @@ export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
                 <li>途中参加や再合流があったら、任意のマスへ移動して調整できます。</li>
                 <li>終了したいタイミングで `ゲーム終了` を押すと、全員に終了画面が表示されます。</li>
               </ul>
+            </section>
+
+            <section className="rule-section">
+              <h3>6. イベントカード一覧</h3>
+              {Object.entries(groupedEventCards).map(([eventType, cards]) => (
+                <div key={eventType} className="guide-subsection">
+                  <h4>{eventTypeLabels[eventType] ?? eventType}</h4>
+                  <div className="help-table-wrap">
+                    <table className="help-table">
+                      <thead>
+                        <tr>
+                          <th>イベント名</th>
+                          <th>内容</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cards.map((card) => (
+                          <tr key={card.id}>
+                            <td>{card.title}</td>
+                            <td>{card.description}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </section>
           </div>
         ) : mode === "rules" ? (
