@@ -183,7 +183,7 @@ export const addPlayerToRoom = (
   const player: Player = {
     id: `player_${Math.random().toString(36).slice(2, 8)}`,
     name,
-    position: 1,
+    position: 0,
     color: PLAYER_COLORS[room.players.length % PLAYER_COLORS.length],
     careerCards: [],
     strengthCards: [],
@@ -206,7 +206,7 @@ export const startGame = (room: RoomState, data: DataBundle): RoomState => {
   const nextPlayers = room.players.map((player, playerIndex) => {
     return {
       ...player,
-      position: 1,
+      position: 0,
       careerCards: initialCareerCards[playerIndex] ?? [],
       strengthCards: initialStrengthCards.dealtCards[playerIndex] ?? [],
     };
@@ -435,7 +435,7 @@ export const drawEventForCurrentPlayer = (room: RoomState, data: DataBundle): Ro
   if (eventCard.effectType === "advance" && eventCard.advanceBy) {
     playersAfterEffect = playersAfterEffect.map((player) =>
       player.id === currentPlayer.id
-        ? { ...player, position: Math.min(player.position + eventCard.advanceBy!, room.board.length) }
+        ? { ...player, position: Math.min(player.position + eventCard.advanceBy!, room.board.length - 1) }
         : player,
     );
   }
@@ -456,11 +456,11 @@ export const resolveTurn = (room: RoomState, data: DataBundle, dice: number): Ro
     return { room, dice };
   }
 
-  const nextPosition = Math.min(currentPlayer.position + dice, room.board.length);
+  const nextPosition = Math.min(currentPlayer.position + dice, room.board.length - 1);
   const nextPlayers = room.players.map((player) =>
     player.id === currentPlayer.id ? { ...player, position: nextPosition } : player,
   );
-  const currentSpace = room.board[nextPosition - 1];
+  const currentSpace = room.board[nextPosition];
   const updatedRoom: RoomState = {
     ...room,
     players: nextPlayers,
@@ -595,7 +595,7 @@ export const setCurrentTurnPlayer = (room: RoomState, playerId: string): RoomSta
 };
 
 export const movePlayerToPosition = (room: RoomState, playerId: string, position: number): RoomState => {
-  const nextPosition = Math.max(1, Math.min(position, room.board.length));
+  const nextPosition = Math.max(0, Math.min(position, room.board.length - 1));
   const nextPlayers = room.players.map((player) =>
     player.id === playerId ? { ...player, position: nextPosition } : player,
   );

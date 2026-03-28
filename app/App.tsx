@@ -54,7 +54,7 @@ export const App = () => {
     console.log("[board-debug][client]", {
       roomId: room.roomId,
       boardVersion: room.boardVersion,
-      spaces31to39: room.board.slice(30, 39).map((space) => ({ id: space.id, type: space.type })),
+      spaces31to39: room.board.filter((space) => space.id >= 31 && space.id <= 39).map((space) => ({ id: space.id, type: space.type })),
     });
   }, [room]);
 

@@ -87,7 +87,7 @@ describe("gameEngine", () => {
     const started = startGame(room, gameData);
 
     const rolled = resolveTurn(started, gameData, 3);
-    expect(rolled.room.players[0]?.position).toBe(4);
+    expect(rolled.room.players[0]?.position).toBe(3);
     expect(rolled.room.activeResolution?.kind).toBe("question");
 
     const advanced = advanceTurn(rolled.room);
@@ -102,7 +102,7 @@ describe("gameEngine", () => {
     const started = startGame(room, gameData);
 
     const rolled = resolveTurn(started, gameData, 2);
-    expect(rolled.room.players[0]?.position).toBe(3);
+    expect(rolled.room.players[0]?.position).toBe(2);
     expect(rolled.room.activeResolution?.kind).toBe("event");
     expect(rolled.room.activeResolution?.actionRequired).toBe("draw_event");
 

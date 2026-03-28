@@ -31,7 +31,7 @@ export const DeveloperPanel = ({
   const [turnPlayerId, setTurnPlayerId] = useState(room.players[0]?.id ?? "");
   const [dice, setDice] = useState(6);
   const [movePlayerId, setMovePlayerId] = useState(room.players[0]?.id ?? "");
-  const [position, setPosition] = useState(1);
+  const [position, setPosition] = useState(0);
   const [removeBotId, setRemoveBotId] = useState("");
   const [templateIndex, setTemplateIndex] = useState(0);
 
@@ -105,7 +105,7 @@ export const DeveloperPanel = ({
           </label>
           <label>
             移動先マス
-            <input type="number" min={1} max={40} value={position} onChange={(event) => setPosition(Number(event.target.value))} />
+            <input type="number" min={0} max={39} value={position} onChange={(event) => setPosition(Number(event.target.value))} />
           </label>
           <button type="button" className="secondary" onClick={() => onMovePlayer(movePlayerId, position)}>
             任意マスへ移動

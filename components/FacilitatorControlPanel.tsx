@@ -14,7 +14,7 @@ export const FacilitatorControlPanel = ({
 }: FacilitatorControlPanelProps) => {
   const [orderedPlayerIds, setOrderedPlayerIds] = useState<string[]>(room.players.map((player) => player.id));
   const [movePlayerId, setMovePlayerId] = useState(room.players[0]?.id ?? "");
-  const [position, setPosition] = useState(1);
+  const [position, setPosition] = useState(0);
 
   useEffect(() => {
     setOrderedPlayerIds(room.players.map((player) => player.id));
@@ -119,7 +119,7 @@ export const FacilitatorControlPanel = ({
           </label>
           <label>
             移動先マス
-            <input type="number" min={1} max={40} value={position} onChange={(event) => setPosition(Number(event.target.value))} />
+            <input type="number" min={0} max={39} value={position} onChange={(event) => setPosition(Number(event.target.value))} />
           </label>
           <button type="button" onClick={() => onMovePlayer(movePlayerId, position)}>
             コマを移動する

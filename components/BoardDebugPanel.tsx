@@ -7,7 +7,7 @@ interface BoardDebugPanelProps {
 }
 
 export const BoardDebugPanel = ({ roomId, boardVersion, board }: BoardDebugPanelProps) => {
-  const spaces31to39 = board.slice(30, 39);
+  const spaces31to39 = board.filter((space) => space.id >= 31 && space.id <= 39);
 
   return (
     <section className="panel board-debug-panel">

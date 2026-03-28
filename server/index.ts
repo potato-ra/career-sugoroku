@@ -277,7 +277,7 @@ io.on("connection", (socket) => {
     console.log("[board-debug][server] room:create", {
       roomId: nextRoomId,
       boardVersion: room.boardVersion,
-      spaces31to39: room.board.slice(30, 39).map((space) => ({ id: space.id, type: space.type })),
+      spaces31to39: room.board.filter((space) => space.id >= 31 && space.id <= 39).map((space) => ({ id: space.id, type: space.type })),
     });
     if (nextRoomId !== trimmedRoomId) {
       room.logs.unshift(createLog(`ルームIDが使用中だったため ${nextRoomId} で作成しました`));
