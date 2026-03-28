@@ -21,6 +21,7 @@ export const App = () => {
     startGame,
     rollDice,
     endTurn,
+    closeGame,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,
@@ -88,6 +89,28 @@ export const App = () => {
   const boardCurrentUserId = viewMode === "player" ? viewedPlayer?.id ?? playerId : playerId;
   const showFacilitatorControls = viewMode === "facilitator" && isFacilitator;
 
+  if (room.endedAt) {
+    return (
+      <main className="app-shell">
+        <section className="panel waiting-panel">
+          <p className="eyebrow">ルームID: {room.roomId}</p>
+          <h1>お疲れさまでした</h1>
+          <p>ルームを閉じました。ご参加ありがとうございました。</p>
+          <p>{room.endedByName ? `${room.endedByName} がゲームを終了しました。` : "ゲームを終了しました。"}</p>
+          <div className="inline-actions">
+            <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
+              ルール
+            </button>
+            <button type="button" className="secondary" onClick={() => setHelpMode("strengths")}>
+              強みカード一覧
+            </button>
+          </div>
+        </section>
+        <HelpPanel mode={helpMode} onClose={() => setHelpMode(null)} />
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar">
@@ -129,6 +152,11 @@ export const App = () => {
           <button onClick={() => void startGame()} disabled={!canStart || !isFacilitator}>
             ゲーム開始
           </button>
+          {isFacilitator ? (
+            <button className="secondary" onClick={() => void closeGame()}>
+              ゲーム終了
+            </button>
+          ) : null}
         </div>
       </header>
 

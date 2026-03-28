@@ -12,6 +12,7 @@ import {
   createRoomState,
   createLog,
   drawEventForCurrentPlayer,
+  endGame,
   giveRandomStrengthCard,
   giveStrengthCard,
   movePlayerToPosition,
@@ -423,6 +424,24 @@ io.on("connection", (socket) => {
 
     const finalRoom = room.players[room.currentTurnIndex]?.isBot ? runBotEndTurn(room) : advanceTurn(room);
     emitRoomState(roomId, finalRoom);
+    callback?.({ ok: true });
+  });
+
+  socket.on("game:close", ({ roomId, playerId }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "ゲーム終了はファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    const nextRoom = endGame(room, playerId);
+    clearBotTimers(roomId);
+    emitRoomState(roomId, nextRoom);
     callback?.({ ok: true });
   });
 

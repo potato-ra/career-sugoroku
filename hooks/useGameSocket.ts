@@ -182,6 +182,17 @@ export const useGameSocket = () => {
     }
   };
 
+  const closeGame = async () => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("game:close", { roomId: room.roomId, playerId });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "ゲーム終了に失敗しました。");
+    }
+  };
+
   const drawEvent = async () => {
     if (!room || !playerId) {
       return;
@@ -260,6 +271,7 @@ export const useGameSocket = () => {
     startGame,
     rollDice,
     endTurn,
+    closeGame,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,

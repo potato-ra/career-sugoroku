@@ -84,6 +84,8 @@ export interface RoomState {
   players: Player[];
   currentTurnIndex: number;
   started: boolean;
+  endedAt: string | null;
+  endedByName: string | null;
   isDemoMode: boolean;
   board: BoardSpace[];
   logs: GameLog[];

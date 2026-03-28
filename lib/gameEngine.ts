@@ -147,6 +147,8 @@ export const createRoomState = (roomId: string, board: BoardSpace[], boardVersio
   players: [],
   currentTurnIndex: 0,
   started: false,
+  endedAt: null,
+  endedByName: null,
   isDemoMode,
   board,
   logs: [createLog(`ルーム ${roomId} を作成しました`)],
@@ -209,6 +211,8 @@ export const startGame = (room: RoomState, data: DataBundle): RoomState => {
     ...room,
     players: nextPlayers,
     started: true,
+    endedAt: null,
+    endedByName: null,
     currentTurnIndex: 0,
     activeResolution: null,
     usedQuestionIds: [],
@@ -217,6 +221,26 @@ export const startGame = (room: RoomState, data: DataBundle): RoomState => {
     strengthGiftHistory: [],
     winnerId: null,
     logs: [createLog("ゲームを開始しました"), ...room.logs],
+  };
+};
+
+export const endGame = (room: RoomState, actorId: string): RoomState => {
+  const actorName =
+    room.facilitatorId === actorId
+      ? room.facilitatorName
+      : room.players.find((player) => player.id === actorId)?.name ?? null;
+
+  if (!actorName) {
+    return room;
+  }
+
+  return {
+    ...room,
+    started: false,
+    activeResolution: null,
+    endedAt: new Date().toISOString(),
+    endedByName: actorName,
+    logs: [createLog(`${actorName} がゲームを終了しました`), ...room.logs],
   };
 };
 
