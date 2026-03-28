@@ -35,7 +35,7 @@ export const App = () => {
   } = useGameSocket();
   const [viewMode, setViewMode] = useState<"facilitator" | "player">("facilitator");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
-  const [helpMode, setHelpMode] = useState<"guide" | "rules" | "strengths" | null>(null);
+  const [helpMode, setHelpMode] = useState<"rules" | "strengths" | null>(null);
 
   useEffect(() => {
     if (!room) {
@@ -111,9 +111,6 @@ export const App = () => {
             <button type="button" className="secondary" onClick={() => window.open(printGuideUrl, "_blank", "noopener,noreferrer")}>
               印刷用資料
             </button>
-            <button type="button" className="secondary" onClick={() => setHelpMode("guide")}>
-              配布ガイド
-            </button>
             <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
               ルール
             </button>
@@ -160,9 +157,6 @@ export const App = () => {
             <button type="button" className="secondary" onClick={() => window.open(printGuideUrl, "_blank", "noopener,noreferrer")}>
               印刷用資料
             </button>
-            <button type="button" className="secondary" onClick={() => setHelpMode("guide")}>
-              配布ガイド
-            </button>
             <button type="button" className="secondary" onClick={() => setHelpMode("rules")}>
               ルール
             </button>
@@ -171,14 +165,16 @@ export const App = () => {
             </button>
           </div>
           <div className="facilitator-badge">{isFacilitator ? "ファシリ操作権あり" : "プレイヤーはサイコロのみ操作"}</div>
-          <button onClick={() => void startGame()} disabled={!canStart || !isFacilitator}>
-            ゲーム開始
-          </button>
-          {isFacilitator ? (
-            <button className="secondary" onClick={() => void closeGame()}>
-              ゲーム終了
+          <div className="inline-actions action-button-row">
+            <button onClick={() => void startGame()} disabled={!canStart || !isFacilitator}>
+              ゲーム開始
             </button>
-          ) : null}
+            {isFacilitator ? (
+              <button className="secondary" onClick={() => void closeGame()}>
+                ゲーム終了
+              </button>
+            ) : null}
+          </div>
         </div>
       </header>
 

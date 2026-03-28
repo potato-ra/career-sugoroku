@@ -151,6 +151,10 @@ label {
   gap: 12px;
 }
 
+.action-button-row {
+  justify-content: flex-end;
+}
+
 .role-switcher {
   width: min(360px, 100%);
 }
@@ -440,11 +444,6 @@ label {
 }
 
 .rule-section {
-  display: grid;
-  gap: 10px;
-}
-
-.guide-subsection {
   display: grid;
   gap: 10px;
 }
