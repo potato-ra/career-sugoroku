@@ -231,6 +231,21 @@ export const useGameSocket = () => {
     }
   };
 
+  const drawOrderLottery = async (targetPlayerId?: string) => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("game:drawOrderLottery", {
+      roomId: room.roomId,
+      playerId,
+      targetPlayerId,
+    });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "順番くじに失敗しました。");
+    }
+  };
+
   const drawEvent = async () => {
     if (!room || !playerId) {
       return;
@@ -313,6 +328,7 @@ export const useGameSocket = () => {
     setPlayerOrder,
     rollTurnOrderDice,
     movePlayer,
+    drawOrderLottery,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,

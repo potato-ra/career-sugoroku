@@ -394,6 +394,16 @@ label {
   margin: 4px 0;
 }
 
+.waiting-order-box {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff7ed;
+  border: 1px solid #fdba74;
+}
+
 .board-debug-panel p {
   margin: 6px 0 0;
   font-family: "SFMono-Regular", "Menlo", monospace;

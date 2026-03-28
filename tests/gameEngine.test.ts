@@ -4,6 +4,7 @@ import {
   assignFacilitator,
   canStartGame,
   createRoomState,
+  drawTurnOrderLottery,
   drawEventForCurrentPlayer,
   giveRandomStrengthCard,
   rollTurnOrderDice,
@@ -153,5 +154,23 @@ describe("gameEngine", () => {
     const updated = rollTurnOrderDice(room);
     expect(updated.turnOrderRolls).toHaveLength(3);
     expect(updated.turnOrderRolls.every((roll) => roll.dice >= 1 && roll.dice <= 6)).toBe(true);
+  });
+
+  it("lets players draw order lottery and finalizes order when everyone has drawn", () => {
+    const room = createRoomState("room-lottery", gameData.board, boardVersion);
+    const playerA = addPlayerToRoom(room, "A", "socket-a");
+    const playerB = addPlayerToRoom(room, "B", "socket-b");
+    const playerC = addPlayerToRoom(room, "C", "socket-c");
+
+    const afterFirstDraw = drawTurnOrderLottery(room, playerA.id);
+    expect(afterFirstDraw.turnOrderRolls).toHaveLength(1);
+
+    const afterSecondDraw = drawTurnOrderLottery(afterFirstDraw, playerB.id);
+    expect(afterSecondDraw.turnOrderRolls).toHaveLength(2);
+
+    const finalized = drawTurnOrderLottery(afterSecondDraw, playerC.id);
+    expect(finalized.turnOrderRolls).toHaveLength(3);
+    expect(new Set(finalized.turnOrderRolls.map((roll) => roll.dice)).size).toBe(3);
+    expect(finalized.players.map((player) => player.id).sort()).toEqual([playerA.id, playerB.id, playerC.id].sort());
   });
 });

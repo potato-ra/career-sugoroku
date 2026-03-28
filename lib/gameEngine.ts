@@ -192,6 +192,9 @@ export const addPlayerToRoom = (
   };
 
   room.players.push(player);
+  if (!room.started) {
+    room.turnOrderRolls = [];
+  }
   room.logs.unshift(createLog(`${name} が参加しました`));
   return player;
 };
@@ -288,6 +291,88 @@ export const rollTurnOrderDice = (room: RoomState): RoomState => {
       currentTurnIndex: nextTurnIndex,
     },
     `順番決めサイコロの結果: ${turnOrderRolls.map((roll) => `${roll.playerName}=${roll.dice}`).join(" / ")}`,
+  );
+};
+
+export const drawTurnOrderLottery = (room: RoomState, actorId: string, targetPlayerId?: string): RoomState => {
+  const targetId = targetPlayerId ?? actorId;
+  const targetPlayer = room.players.find((player) => player.id === targetId);
+  if (!targetPlayer) {
+    return room;
+  }
+
+  if (room.turnOrderRolls.some((roll) => roll.playerId === targetId)) {
+    return room;
+  }
+
+  const usedValues = new Set(room.turnOrderRolls.map((roll) => roll.dice));
+  const availableValues = Array.from({ length: room.players.length }, (_value, index) => index + 1).filter(
+    (value) => !usedValues.has(value),
+  );
+
+  if (availableValues.length === 0) {
+    return room;
+  }
+
+  const nextRolls = [...room.turnOrderRolls];
+  const takeRandomValue = () => {
+    const randomIndex = Math.floor(Math.random() * availableValues.length);
+    const [value] = availableValues.splice(randomIndex, 1);
+    return value;
+  };
+
+  const targetValue = takeRandomValue();
+  if (!targetValue) {
+    return room;
+  }
+
+  nextRolls.push({
+    playerId: targetPlayer.id,
+    playerName: targetPlayer.name,
+    dice: targetValue,
+  });
+
+  const pendingBots = room.players.filter(
+    (player) => player.isBot && !nextRolls.some((roll) => roll.playerId === player.id),
+  );
+
+  pendingBots.forEach((botPlayer) => {
+    const botValue = takeRandomValue();
+    if (!botValue) {
+      return;
+    }
+
+    nextRolls.push({
+      playerId: botPlayer.id,
+      playerName: botPlayer.name,
+      dice: botValue,
+    });
+  });
+
+  const roomWithRolls: RoomState = {
+    ...room,
+    turnOrderRolls: nextRolls,
+    logs: [createLog(`${targetPlayer.name} が順番くじを引きました`), ...room.logs],
+  };
+
+  if (nextRolls.length !== room.players.length) {
+    return roomWithRolls;
+  }
+
+  const sortedPlayerIds = [...nextRolls]
+    .sort((left, right) => left.dice - right.dice)
+    .map((roll) => roll.playerId);
+
+  return appendLog(
+    {
+      ...setPlayOrder(roomWithRolls, sortedPlayerIds),
+      turnOrderRolls: nextRolls,
+      currentTurnIndex: 0,
+    },
+    `順番くじで手番順が確定しました: ${[...nextRolls]
+      .sort((left, right) => left.dice - right.dice)
+      .map((roll) => `${roll.dice}番 ${roll.playerName}`)
+      .join(" / ")}`,
   );
 };
 

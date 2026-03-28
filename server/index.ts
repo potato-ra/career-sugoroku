@@ -11,6 +11,7 @@ import {
   canStartGame,
   createRoomState,
   createLog,
+  drawTurnOrderLottery,
   drawEventForCurrentPlayer,
   endGame,
   giveRandomStrengthCard,
@@ -486,6 +487,35 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
+  socket.on("game:drawOrderLottery", ({ roomId, playerId, targetPlayerId }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    const canDrawAsDemoFacilitator =
+      room.isDemoMode &&
+      room.facilitatorId === playerId &&
+      targetPlayerId &&
+      room.players.some((player) => player.id === targetPlayerId && !player.isBot);
+
+    const actorIsTargetPlayer = room.players.some((player) => player.id === playerId && !player.isBot);
+    if (!actorIsTargetPlayer && !canDrawAsDemoFacilitator) {
+      callback?.({ ok: false, message: "順番くじはプレイヤーが引いてください。" });
+      return;
+    }
+
+    const nextRoom = drawTurnOrderLottery(room, playerId, canDrawAsDemoFacilitator ? String(targetPlayerId) : undefined);
+    if (nextRoom === room) {
+      callback?.({ ok: false, message: "このプレイヤーはすでに順番くじを引いています。" });
+      return;
+    }
+
+    emitRoomState(roomId, nextRoom);
+    callback?.({ ok: true });
+  });
+
   socket.on("game:movePlayer", ({ roomId, playerId, targetPlayerId, position }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
@@ -711,6 +741,7 @@ io.on("connection", (socket) => {
     const nextRoom: RoomState = {
       ...room,
       players: room.players.map((player) => (player.id === participation.actorId ? { ...player, socketId: undefined } : player)),
+      turnOrderRolls: room.started ? room.turnOrderRolls : [],
       logs: [createLog("プレイヤーの接続が切れました。30秒以内なら再接続できます。"), ...room.logs],
     };
     emitRoomState(participation.roomId, nextRoom);

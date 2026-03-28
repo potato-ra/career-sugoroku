@@ -24,8 +24,8 @@ export const App = () => {
     endTurn,
     closeGame,
     setPlayerOrder,
-    rollTurnOrderDice,
     movePlayer,
+    drawOrderLottery,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,
@@ -92,6 +92,11 @@ export const App = () => {
 
   const boardCurrentUserId = viewMode === "player" ? viewedPlayer?.id ?? playerId : playerId;
   const showFacilitatorControls = viewMode === "facilitator" && isFacilitator;
+  const demoLotteryTarget = room.isDemoMode && isFacilitator ? viewedPlayer : currentPlayer;
+  const lotteryPlayerId = demoLotteryTarget?.id ?? currentPlayer?.id ?? "";
+  const lotteryEntry = room.turnOrderRolls.find((roll) => roll.playerId === lotteryPlayerId);
+  const pendingLotteryPlayers = room.players.filter((player) => !room.turnOrderRolls.some((roll) => roll.playerId === player.id));
+  const canDrawLottery = !room.started && Boolean(lotteryPlayerId) && !lotteryEntry && demoLotteryTarget?.isBot !== true;
 
   if (room.endedAt) {
     return (
@@ -188,6 +193,37 @@ export const App = () => {
               ? "デモモードでは1人でもゲーム開始可能です。Bot が自動でターン進行を補助します。"
               : "3〜5人そろったら、ファシリテーターがゲーム開始を押してください。"}
           </p>
+          <div className="waiting-order-box">
+            <div className="section-header">
+              <h3>順番くじ</h3>
+              <p>{room.turnOrderRolls.length === room.players.length ? "全員の順番が確定しました" : "全員が引くと自動で順番が決まります"}</p>
+            </div>
+            <div className="order-dice-results">
+              {room.turnOrderRolls.length > 0 ? (
+                room.turnOrderRolls
+                  .slice()
+                  .sort((left, right) => left.dice - right.dice)
+                  .map((roll) => (
+                    <p key={roll.playerId}>
+                      {roll.dice}番: {roll.playerName}
+                    </p>
+                  ))
+              ) : (
+                <p>まだ誰も引いていません。</p>
+              )}
+            </div>
+            {pendingLotteryPlayers.length > 0 ? (
+              <p className="mode-caption">未実施: {pendingLotteryPlayers.map((player) => player.name).join(" / ")}</p>
+            ) : null}
+            {!isFacilitator || room.isDemoMode ? (
+              <div className="inline-actions">
+                <button type="button" onClick={() => void drawOrderLottery(room.isDemoMode && isFacilitator ? lotteryPlayerId : undefined)} disabled={!canDrawLottery}>
+                  {room.isDemoMode && isFacilitator ? `${demoLotteryTarget?.name ?? "プレイヤー"}で順番を引く` : "順番を引く"}
+                </button>
+                {lotteryEntry ? <span className="mode-badge perspective">あなたの番号: {lotteryEntry.dice}</span> : null}
+              </div>
+            ) : null}
+          </div>
           <p>{room.facilitatorName ? `ファシリテーター: ${room.facilitatorName}` : "ファシリテーター未接続"}</p>
           <ul className="waiting-list">
             {room.players.map((player) => (
@@ -245,7 +281,6 @@ export const App = () => {
         <FacilitatorControlPanel
           room={room}
           onSetPlayerOrder={(orderedPlayerIds) => void setPlayerOrder(orderedPlayerIds)}
-          onRollTurnOrderDice={() => void rollTurnOrderDice()}
           onMovePlayer={(targetPlayerId, position) => void movePlayer(targetPlayerId, position)}
         />
       ) : null}

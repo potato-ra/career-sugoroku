@@ -4,14 +4,12 @@ import type { RoomState } from "../lib/types";
 interface FacilitatorControlPanelProps {
   room: RoomState;
   onSetPlayerOrder: (orderedPlayerIds: string[]) => void;
-  onRollTurnOrderDice: () => void;
   onMovePlayer: (targetPlayerId: string, position: number) => void;
 }
 
 export const FacilitatorControlPanel = ({
   room,
   onSetPlayerOrder,
-  onRollTurnOrderDice,
   onMovePlayer,
 }: FacilitatorControlPanelProps) => {
   const [orderedPlayerIds, setOrderedPlayerIds] = useState<string[]>(room.players.map((player) => player.id));
@@ -69,7 +67,7 @@ export const FacilitatorControlPanel = ({
       <div className="facilitator-control-grid">
         <div className="developer-card">
           <h3>手番順の変更</h3>
-          <p className="empty-text">手動で並び替えるか、順番決めサイコロで自動決定できます。</p>
+          <p className="empty-text">プレイヤーが引いた順番くじの結果を見ながら、必要なら手動で並び替えできます。</p>
           <div className="order-list">
             {orderedPlayers.map((player, index) => (
               <div key={player.id} className="order-item">
@@ -92,19 +90,14 @@ export const FacilitatorControlPanel = ({
               </div>
             ))}
           </div>
-          <div className="inline-actions">
-            <button type="button" onClick={() => onSetPlayerOrder(orderedPlayers.map((player) => player.id))}>
-              この順番を反映
-            </button>
-            <button type="button" className="secondary" onClick={onRollTurnOrderDice}>
-              順番決めサイコロ
-            </button>
-          </div>
+          <button type="button" onClick={() => onSetPlayerOrder(orderedPlayers.map((player) => player.id))}>
+            この順番を反映
+          </button>
           {room.turnOrderRolls.length > 0 ? (
             <div className="order-dice-results">
               {room.turnOrderRolls.map((roll) => (
                 <p key={roll.playerId}>
-                  {roll.playerName}: {roll.dice}
+                  {roll.dice}番: {roll.playerName}
                 </p>
               ))}
             </div>
