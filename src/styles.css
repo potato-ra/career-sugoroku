@@ -365,8 +365,8 @@ label {
 .space-start {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.85), transparent 48%),
-    linear-gradient(180deg, #fef3c7, #fde68a);
-  border-color: #eab308;
+    linear-gradient(180deg, #f8fafc, #e2e8f0);
+  border-color: #94a3b8;
 }
 
 .space-question {
@@ -407,8 +407,8 @@ label {
 .space-goal {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.88), transparent 48%),
-    linear-gradient(180deg, #fef3c7, #fde68a);
-  border-color: #eab308;
+    linear-gradient(180deg, #f8fafc, #e2e8f0);
+  border-color: #94a3b8;
 }
 
 .space-start strong,
