@@ -1,5 +1,16 @@
 import type { BoardSpace, Player } from "../lib/types";
 
+const SPACE_ICONS: Record<BoardSpace["type"], string> = {
+  start: "🚩",
+  question: "💬",
+  deep: "🔎",
+  praise: "👏",
+  question_to_other: "🗣️",
+  event: "🎲",
+  card_draw: "🃏",
+  goal: "🏁",
+};
+
 interface GameBoardProps {
   board: BoardSpace[];
   players: Player[];
@@ -65,13 +76,18 @@ export const GameBoard = ({
 
           return (
             <article key={space.id} className={`board-cell space-${space.type}`}>
-              <header>
-                <span>#{space.id}</span>
+              <header className="board-cell-header">
+                <div className="space-badges">
+                  <span className="space-index">#{space.id}</span>
+                  <span className="space-icon" aria-hidden="true">
+                    {SPACE_ICONS[space.type]}
+                  </span>
+                </div>
                 <strong>{space.label}</strong>
               </header>
               <div className="token-row">
                 {spacePlayers.map((player) => (
-                <span key={player.id} className="token" style={{ backgroundColor: player.color }} title={player.name}>
+                  <span key={player.id} className="token" style={{ backgroundColor: player.color }} title={player.name}>
                     {player.avatarUrl ? <img src={player.avatarUrl} alt={`${player.name}の画像`} className="token-image" /> : player.name.slice(0, 1)}
                   </span>
                 ))}
