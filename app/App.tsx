@@ -6,6 +6,7 @@ import { FacilitatorControlPanel } from "../components/FacilitatorControlPanel";
 import { GameBoard } from "../components/GameBoard";
 import { HelpPanel } from "../components/HelpPanel";
 import { Lobby } from "../components/Lobby";
+import { PlayerPeekPanel } from "../components/PlayerPeekPanel";
 import { PlayerPanel } from "../components/PlayerPanel";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 import { StrengthCardPanel } from "../components/StrengthCardPanel";
@@ -260,23 +261,27 @@ export const App = () => {
           onEndTurn={() => void endTurn()}
           isFacilitator={viewMode === "facilitator" && isFacilitator}
         />
-        <div className={`side-column ${viewMode === "player" ? "player-side-column" : ""}`}>
+      </div>
+
+      <div className={`support-grid ${viewMode === "player" ? "player-support-grid" : ""}`}>
+        <div className="support-column">
           <EventModal resolution={room.activeResolution} canDrawEvent={canDrawEvent} onDrawEvent={() => void drawEvent()} />
-          <section className={`panel logs-panel ${viewMode === "player" ? "compact-logs-panel" : ""}`}>
-            <div className="section-header">
-              <h2>{viewMode === "facilitator" ? "進行ログ" : "プレイヤーメモ"}</h2>
-              <p>{currentTurnPlayer ? `${currentTurnPlayer.name} の手番` : "待機中"}</p>
-            </div>
-            <div className="log-list">
-              {visibleLogs.map((log) => (
-                <p key={log.id}>{log.message}</p>
-              ))}
-            </div>
-            {viewMode === "player" ? (
-              <p className="player-focus-note">カードの配布やターン終了はファシリテーターが行います。自分の番ではサイコロを振って会話に集中しましょう。</p>
-            ) : null}
-          </section>
         </div>
+        <section className={`panel logs-panel ${viewMode === "player" ? "compact-logs-panel" : ""}`}>
+          <div className="section-header">
+            <h2>{viewMode === "facilitator" ? "進行ログ" : "プレイヤーメモ"}</h2>
+            <p>{currentTurnPlayer ? `${currentTurnPlayer.name} の手番` : "待機中"}</p>
+          </div>
+          <div className="log-list">
+            {visibleLogs.map((log) => (
+              <p key={log.id}>{log.message}</p>
+            ))}
+          </div>
+          {viewMode === "player" ? (
+            <p className="player-focus-note">カードの配布やターン終了はファシリテーターが行います。自分の番ではサイコロを振って会話に集中しましょう。</p>
+          ) : null}
+        </section>
+        {viewMode === "player" ? <PlayerPeekPanel players={room.players} currentPlayerId={viewedPlayer?.id ?? playerId} /> : null}
       </div>
 
       <PlayerPanel

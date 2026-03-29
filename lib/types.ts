@@ -57,6 +57,7 @@ export interface Player {
   name: string;
   position: number;
   color: string;
+  avatarUrl?: string | null;
   careerCards: CareerCard[];
   strengthCards: StrengthCard[];
   socketId?: string;

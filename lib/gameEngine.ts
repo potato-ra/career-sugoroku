@@ -179,12 +179,14 @@ export const addPlayerToRoom = (
   name: string,
   socketId: string,
   isBot = false,
+  avatarUrl?: string | null,
 ): Player => {
   const player: Player = {
     id: `player_${Math.random().toString(36).slice(2, 8)}`,
     name,
     position: 0,
     color: PLAYER_COLORS[room.players.length % PLAYER_COLORS.length],
+    avatarUrl: avatarUrl ?? null,
     careerCards: [],
     strengthCards: [],
     socketId,

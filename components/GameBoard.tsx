@@ -71,8 +71,8 @@ export const GameBoard = ({
               </header>
               <div className="token-row">
                 {spacePlayers.map((player) => (
-                  <span key={player.id} className="token" style={{ backgroundColor: player.color }} title={player.name}>
-                    {player.name.slice(0, 1)}
+                <span key={player.id} className="token" style={{ backgroundColor: player.color }} title={player.name}>
+                    {player.avatarUrl ? <img src={player.avatarUrl} alt={`${player.name}の画像`} className="token-image" /> : player.name.slice(0, 1)}
                   </span>
                 ))}
               </div>

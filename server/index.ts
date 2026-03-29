@@ -151,13 +151,13 @@ const addBotsToRoom = (room: RoomState, count: number) => {
   };
 };
 
-const ensureDemoLocalPlayer = (room: RoomState, socketId: string) => {
+const ensureDemoLocalPlayer = (room: RoomState, socketId: string, avatarUrl?: string | null) => {
   const existingHumanPlayer = room.players.find((player) => !player.isBot);
   if (existingHumanPlayer) {
     return room;
   }
 
-  addPlayerToRoom(room, "Demo_Player", socketId);
+  addPlayerToRoom(room, "Demo_Player", socketId, false, avatarUrl);
   return {
     ...room,
     logs: [createLog("デモ用プレイヤー Demo_Player を追加しました"), ...room.logs],
@@ -255,7 +255,7 @@ function scheduleBotAutomation(roomId: string) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("room:create", ({ roomId, name, isFacilitator, isDemoMode, botCount }, callback) => {
+  socket.on("room:create", ({ roomId, name, isFacilitator, isDemoMode, botCount, avatarUrl }, callback) => {
     const trimmedRoomId = (roomId || "").trim().toUpperCase();
     const trimmedName = (name || "").trim();
 
@@ -270,7 +270,7 @@ io.on("connection", (socket) => {
     let room = createRoomState(nextRoomId, cloneBoard(latestBoard.board), latestBoard.boardVersion, Boolean(isDemoMode));
     const facilitatorId = assignFacilitator(room, trimmedName, socket.id);
     if (room.isDemoMode) {
-      room = ensureDemoLocalPlayer(room, socket.id);
+      room = ensureDemoLocalPlayer(room, socket.id, avatarUrl);
       room = addBotsToRoom(room, Math.max(2, Math.min(Number(botCount ?? 2), 4)));
       room.logs.unshift(createLog(`デモモードで開始準備中です。Bot を ${room.players.filter((entry) => entry.isBot).length} 人追加しました`));
     }
@@ -337,7 +337,7 @@ io.on("connection", (socket) => {
     callback?.({ ok: true, room: nextRoom, playerId: actorId });
   });
 
-  socket.on("room:join", ({ roomId, name }, callback) => {
+  socket.on("room:join", ({ roomId, name, avatarUrl }, callback) => {
     const trimmedRoomId = (roomId || "").trim().toUpperCase();
     const trimmedName = (name || "").trim();
     const room = rooms.get(trimmedRoomId);
@@ -357,7 +357,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    const player = addPlayerToRoom(room, trimmedName, socket.id);
+    const player = addPlayerToRoom(room, trimmedName, socket.id, false, avatarUrl);
     socketRoomMap.set(socket.id, { roomId: trimmedRoomId, actorId: player.id, role: "player" });
     socket.join(trimmedRoomId);
     emitRoomState(trimmedRoomId, room);

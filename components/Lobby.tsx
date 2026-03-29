@@ -10,10 +10,25 @@ interface LobbyProps {
 export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) => {
   const [createName, setCreateName] = useState("");
   const [createRoomId, setCreateRoomId] = useState("CAREER01");
+  const [createAvatarUrl, setCreateAvatarUrl] = useState("");
   const [joinName, setJoinName] = useState("");
   const [joinRoomId, setJoinRoomId] = useState("CAREER01");
+  const [joinAvatarUrl, setJoinAvatarUrl] = useState("");
   const [createMode, setCreateMode] = useState<"normal" | "demo">("normal");
   const [botCount, setBotCount] = useState(2);
+
+  const readImageFile = async (file: File | null) => {
+    if (!file) {
+      return "";
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      reader.onerror = () => reject(new Error("画像の読み込みに失敗しました。"));
+      reader.readAsDataURL(file);
+    });
+  };
 
   return (
     <section className="lobby-shell">
@@ -34,6 +49,7 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
               roomId: createRoomId,
               name: createName,
               isFacilitator: true,
+              avatarUrl: createMode === "demo" ? createAvatarUrl : undefined,
               isDemoMode: createMode === "demo",
               botCount,
             });
@@ -58,6 +74,28 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
           </label>
           {createMode === "demo" ? (
             <label>
+              デモプレイヤー画像
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={async (event) => {
+                  const nextFile = event.target.files?.[0] ?? null;
+                  const nextUrl = await readImageFile(nextFile);
+                  setCreateAvatarUrl(nextUrl);
+                }}
+              />
+            </label>
+          ) : null}
+          {createMode === "demo" && createAvatarUrl ? (
+            <div className="avatar-upload-preview">
+              <img src={createAvatarUrl} alt="デモプレイヤー画像プレビュー" />
+              <button type="button" className="secondary" onClick={() => setCreateAvatarUrl("")}>
+                画像を外す
+              </button>
+            </div>
+          ) : null}
+          {createMode === "demo" ? (
+            <label>
               Bot人数
               <select value={botCount} onChange={(event) => setBotCount(Number(event.target.value))}>
                 <option value={2}>2人</option>
@@ -78,7 +116,7 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
           className="panel"
           onSubmit={(event) => {
             event.preventDefault();
-            void onJoinRoom({ roomId: joinRoomId, name: joinName, isFacilitator: false });
+            void onJoinRoom({ roomId: joinRoomId, name: joinName, avatarUrl: joinAvatarUrl || undefined, isFacilitator: false });
           }}
         >
           <h2>プレイヤー参加</h2>
@@ -90,6 +128,26 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
             名前
             <input value={joinName} onChange={(event) => setJoinName(event.target.value)} placeholder="プレイヤー名" />
           </label>
+          <label>
+            プレイヤー画像
+            <input
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              onChange={async (event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                const nextUrl = await readImageFile(nextFile);
+                setJoinAvatarUrl(nextUrl);
+              }}
+            />
+          </label>
+          {joinAvatarUrl ? (
+            <div className="avatar-upload-preview">
+              <img src={joinAvatarUrl} alt="プレイヤー画像プレビュー" />
+              <button type="button" className="secondary" onClick={() => setJoinAvatarUrl("")}>
+                画像を外す
+              </button>
+            </div>
+          ) : null}
           <p className="mode-caption">既存の通常モード / デモモードどちらのルームにも参加できます。</p>
           <button type="submit">ルームに参加する</button>
         </form>

@@ -26,7 +26,9 @@ export const PlayerPanel = ({
         {visiblePlayers.map((player) => (
           <article key={player.id} className={`player-card ${player.id === currentTurnPlayerId ? "is-current" : ""}`}>
             <div className="player-meta">
-              <span className="token large-token" style={{ backgroundColor: player.color }} />
+              <span className="token large-token" style={{ backgroundColor: player.color }}>
+                {player.avatarUrl ? <img src={player.avatarUrl} alt={`${player.name}の画像`} className="token-image" /> : player.name.slice(0, 1)}
+              </span>
               <div>
                 <h3>{player.name}</h3>
                 <p>

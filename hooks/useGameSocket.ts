@@ -20,6 +20,7 @@ export interface JoinPayload {
   roomId: string;
   name: string;
   isFacilitator: boolean;
+  avatarUrl?: string;
   isDemoMode?: boolean;
   botCount?: number;
 }
