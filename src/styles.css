@@ -222,8 +222,8 @@ label {
   width: 100%;
   position: relative;
   background:
-    radial-gradient(circle at top left, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.88)),
-    linear-gradient(135deg, rgba(219, 234, 254, 0.42), rgba(240, 253, 244, 0.4) 55%, rgba(255, 237, 213, 0.45));
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.99), rgba(255, 255, 255, 0.92)),
+    linear-gradient(135deg, rgba(219, 234, 254, 0.24), rgba(240, 253, 244, 0.22) 55%, rgba(255, 237, 213, 0.24));
 }
 
 .board-panel::before {
@@ -365,50 +365,50 @@ label {
 .space-start {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.85), transparent 48%),
-    linear-gradient(180deg, #ecfeff, #cffafe);
-  border-color: #06b6d4;
+    linear-gradient(180deg, #fef3c7, #fde68a);
+  border-color: #eab308;
 }
 
 .space-question {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 48%),
-    linear-gradient(180deg, #dbeafe, #bfdbfe);
+    linear-gradient(180deg, #eff6ff, #dbeafe);
   border-color: #3b82f6;
 }
 
 .space-event {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.86), transparent 48%),
-    linear-gradient(180deg, #fef3c7, #fde68a);
+    linear-gradient(180deg, #fef9c3, #fde68a);
   border-color: #eab308;
 }
 
 .space-praise {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 48%),
-    linear-gradient(180deg, #dcfce7, #86efac);
+    linear-gradient(180deg, #ecfdf5, #bbf7d0);
   border-color: #22c55e;
 }
 
 .space-question_to_other {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 48%),
-    linear-gradient(180deg, #fce7f3, #f9a8d4);
+    linear-gradient(180deg, #fdf2f8, #fbcfe8);
   border-color: #ec4899;
 }
 
 .space-card_draw {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.82), transparent 48%),
-    linear-gradient(180deg, #ede9fe, #c4b5fd);
+    linear-gradient(180deg, #f5f3ff, #ddd6fe);
   border-color: #8b5cf6;
 }
 
 .space-goal {
   background:
     radial-gradient(circle at top right, rgba(255, 255, 255, 0.88), transparent 48%),
-    linear-gradient(180deg, #fee2e2, #fca5a5);
-  border-color: #ef4444;
+    linear-gradient(180deg, #fef3c7, #fde68a);
+  border-color: #eab308;
 }
 
 .space-start strong,
