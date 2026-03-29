@@ -63,9 +63,9 @@ export const PlayerPeekPanel = ({ players, currentPlayerId }: PlayerPeekPanelPro
           </div>
           <div className="peek-section">
             <strong>職業カード</strong>
-            <div className="career-card-grid compact-card-grid">
+            <div className="career-card-grid">
               {selectedPlayer.careerCards.map((card) => (
-                <div key={card.id} className={`career-card compact-career-card ${getCareerCategoryClassName(card.category)}`}>
+                <div key={card.id} className={`career-card ${getCareerCategoryClassName(card.category)}`}>
                   <div className="career-card-top">
                     <span className="career-illustration" aria-hidden="true">
                       {getCareerIllustration(card.title, card.category)}
@@ -73,6 +73,27 @@ export const PlayerPeekPanel = ({ players, currentPlayerId }: PlayerPeekPanelPro
                     <span className="career-category-badge">{card.category}</span>
                   </div>
                   <strong>{card.title}</strong>
+                  <p>{card.description}</p>
+                  <div className="card-section">
+                    <span className="card-section-label">活かしやすいスキル</span>
+                    <div className="trait-chip-list">
+                      {card.skills.map((skill) => (
+                        <span key={`${card.id}_${skill}`} className="trait-chip skill-chip">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="card-section">
+                    <span className="card-section-label">こんな人に向いている</span>
+                    <div className="trait-chip-list">
+                      {card.personality.map((trait) => (
+                        <span key={`${card.id}_${trait}`} className="trait-chip personality-chip">
+                          {trait}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>

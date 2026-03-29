@@ -263,7 +263,7 @@ export const App = () => {
         />
       </div>
 
-      <div className={`support-grid ${viewMode === "player" ? "player-support-grid" : ""}`}>
+      <div className={`support-grid ${viewMode === "player" ? "player-top-support-grid" : ""}`}>
         <div className="support-column">
           <EventModal resolution={room.activeResolution} canDrawEvent={canDrawEvent} onDrawEvent={() => void drawEvent()} />
         </div>
@@ -281,15 +281,25 @@ export const App = () => {
             <p className="player-focus-note">カードの配布やターン終了はファシリテーターが行います。自分の番ではサイコロを振って会話に集中しましょう。</p>
           ) : null}
         </section>
-        {viewMode === "player" ? <PlayerPeekPanel players={room.players} currentPlayerId={viewedPlayer?.id ?? playerId} /> : null}
       </div>
 
-      <PlayerPanel
-        players={room.players}
-        currentTurnPlayerId={currentTurnPlayer?.id}
-        focusedPlayerId={viewMode === "player" ? viewedPlayer?.id : undefined}
-        title={viewMode === "facilitator" ? "PlayerPanel" : "プレイヤー視点パネル"}
-      />
+      {viewMode === "player" ? (
+        <div className="player-bottom-grid">
+          <PlayerPanel
+            players={room.players}
+            currentTurnPlayerId={currentTurnPlayer?.id}
+            focusedPlayerId={viewedPlayer?.id}
+            title="プレイヤー視点パネル"
+          />
+          <PlayerPeekPanel players={room.players} currentPlayerId={viewedPlayer?.id ?? playerId} />
+        </div>
+      ) : (
+        <PlayerPanel
+          players={room.players}
+          currentTurnPlayerId={currentTurnPlayer?.id}
+          title="PlayerPanel"
+        />
+      )}
 
       {showFacilitatorControls ? (
         <FacilitatorControlPanel

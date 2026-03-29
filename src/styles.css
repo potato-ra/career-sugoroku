@@ -230,8 +230,16 @@ label {
   margin-top: 20px;
 }
 
-.player-support-grid {
-  grid-template-columns: minmax(280px, 0.95fr) minmax(240px, 0.7fr) minmax(300px, 1fr);
+.player-top-support-grid,
+.player-bottom-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.player-bottom-grid {
+  margin-top: 20px;
 }
 
 .compact-logs-panel {
@@ -846,20 +854,6 @@ label {
   gap: 12px;
 }
 
-.compact-card-grid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.compact-career-card {
-  gap: 8px;
-}
-
-.compact-career-card .career-illustration {
-  width: 36px;
-  height: 36px;
-  font-size: 1.2rem;
-}
-
 .winner-banner {
   margin: 16px 0 0;
   padding: 12px 16px;
@@ -885,7 +879,8 @@ label {
 @media (max-width: 1100px) {
   .content-grid,
   .support-grid,
-  .player-support-grid {
+  .player-top-support-grid,
+  .player-bottom-grid {
     grid-template-columns: 1fr;
   }
 
