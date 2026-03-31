@@ -108,11 +108,28 @@ form.panel,
 .developer-grid,
 .support-column,
 .side-column,
+.facilitator-entry-panel,
+.facilitator-auth-form,
+.facilitator-room-form,
 .player-list,
 .career-card-grid,
 .log-list {
   display: grid;
   gap: 16px;
+}
+
+.facilitator-entry-panel {
+  gap: 24px;
+}
+
+.facilitator-auth-form,
+.facilitator-room-form {
+  padding-top: 4px;
+}
+
+.facilitator-room-form {
+  border-top: 1px solid #dbe4f0;
+  padding-top: 20px;
 }
 
 label {

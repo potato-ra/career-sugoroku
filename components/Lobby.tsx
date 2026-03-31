@@ -73,147 +73,156 @@ export const Lobby = ({
       </div>
 
       <div className="lobby-grid">
-        <form
-          className="panel"
-          onSubmit={async (event) => {
-            event.preventDefault();
-            const ok = await onLogin(loginId, password);
-            if (ok) {
-              setPassword("");
-              setAccountMessage("ファシリログインしました。");
-            }
-          }}
-        >
-          <h2>ファシリログイン</h2>
-          {authUser ? (
-            <>
-              <p className="mode-caption">
-                ログイン中: {authUser.displayName} ({authUser.loginId})
-              </p>
-              <div className="inline-actions">
-                <span className={`mode-badge ${authUser.role === "admin" ? "demo" : "perspective"}`}>
-                  {authUser.role === "admin" ? "管理者" : "ファシリ"}
-                </span>
-                {authUser.mustChangePassword ? <span className="mode-badge normal">パスワード変更が必要</span> : null}
-              </div>
-              <label>
-                現在のパスワード
-                <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
-              </label>
-              <label>
-                新しいパスワード
-                <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
-              </label>
-              <div className="inline-actions">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await onChangePassword(currentPassword, nextPassword);
-                    setCurrentPassword("");
-                    setNextPassword("");
-                    setAccountMessage("パスワードを変更しました。");
-                  }}
-                >
-                  パスワード変更
-                </button>
-                <button type="button" className="secondary" onClick={() => void onLogout()}>
-                  ログアウト
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <label>
-                ログインID
-                <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="owner" />
-              </label>
-              <label>
-                パスワード
-                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-              </label>
-              <button type="submit" disabled={authLoading}>
-                ファシリログイン
-              </button>
-            </>
-          )}
-          {authError ? <p className="error-text">{authError}</p> : null}
-          {accountMessage ? <p className="mode-caption">{accountMessage}</p> : null}
-        </form>
-
-        <form
-          className="panel"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void onCreateRoom({
-              roomId: createRoomId,
-              name: authUser?.displayName ?? "",
-              isFacilitator: true,
-              authToken: authUser ? window.localStorage.getItem("career-sugoroku-auth") ?? undefined : undefined,
-              avatarUrl: createMode === "demo" ? createAvatarUrl : undefined,
-              isDemoMode: createMode === "demo",
-              botCount,
-            });
-          }}
-        >
-          <h2>ルーム作成</h2>
-          <div className="mode-switch">
-            <button type="button" className={createMode === "normal" ? "" : "secondary"} onClick={() => setCreateMode("normal")}>
-              通常モード
-            </button>
-            <button type="button" className={createMode === "demo" ? "" : "secondary"} onClick={() => setCreateMode("demo")}>
-              デモモード
-            </button>
+        <section className="panel facilitator-entry-panel">
+          <div className="section-header">
+            <div>
+              <h2>ファシリ入口</h2>
+              <p className="mode-caption">ファシリとしてログインすると、そのまま同じ画面でルーム作成に進めます。</p>
+            </div>
           </div>
-          <label>
-            ルームID
-            <input value={createRoomId} onChange={(event) => setCreateRoomId(event.target.value.toUpperCase())} />
-          </label>
-          <label>
-            ファシリ名
-            <input value={authUser?.displayName ?? ""} readOnly placeholder="ファシリログインすると表示されます" />
-          </label>
-          {createMode === "demo" ? (
-            <label>
-              デモプレイヤー画像
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/jpg"
-                onChange={async (event) => {
-                  const nextFile = event.target.files?.[0] ?? null;
-                  const nextUrl = await readImageFile(nextFile);
-                  setCreateAvatarUrl(nextUrl);
-                }}
-              />
-            </label>
-          ) : null}
-          {createMode === "demo" && createAvatarUrl ? (
-            <div className="avatar-upload-preview">
-              <img src={createAvatarUrl} alt="デモプレイヤー画像プレビュー" />
-              <button type="button" className="secondary" onClick={() => setCreateAvatarUrl("")}>
-                画像を外す
+
+          <form
+            className="facilitator-auth-form"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              const ok = await onLogin(loginId, password);
+              if (ok) {
+                setPassword("");
+                setAccountMessage("ファシリログインしました。続けてルームを作成できます。");
+              }
+            }}
+          >
+            <h3>1. ファシリログイン</h3>
+            {authUser ? (
+              <>
+                <p className="mode-caption">
+                  ログイン中: {authUser.displayName} ({authUser.loginId})
+                </p>
+                <div className="inline-actions">
+                  <span className={`mode-badge ${authUser.role === "admin" ? "demo" : "perspective"}`}>
+                    {authUser.role === "admin" ? "管理者" : "ファシリ"}
+                  </span>
+                  {authUser.mustChangePassword ? <span className="mode-badge normal">パスワード変更が必要</span> : null}
+                </div>
+                <label>
+                  現在のパスワード
+                  <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+                </label>
+                <label>
+                  新しいパスワード
+                  <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
+                </label>
+                <div className="inline-actions">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await onChangePassword(currentPassword, nextPassword);
+                      setCurrentPassword("");
+                      setNextPassword("");
+                      setAccountMessage("パスワードを変更しました。");
+                    }}
+                  >
+                    パスワード変更
+                  </button>
+                  <button type="button" className="secondary" onClick={() => void onLogout()}>
+                    ログアウト
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <label>
+                  ログインID
+                  <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="owner" />
+                </label>
+                <label>
+                  パスワード
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+                </label>
+                <button type="submit" disabled={authLoading}>
+                  ファシリログイン
+                </button>
+              </>
+            )}
+            {authError ? <p className="error-text">{authError}</p> : null}
+            {accountMessage ? <p className="mode-caption">{accountMessage}</p> : null}
+          </form>
+
+          <form
+            className="facilitator-room-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void onCreateRoom({
+                roomId: createRoomId,
+                name: authUser?.displayName ?? "",
+                isFacilitator: true,
+                authToken: authUser ? window.localStorage.getItem("career-sugoroku-auth") ?? undefined : undefined,
+                avatarUrl: createMode === "demo" ? createAvatarUrl : undefined,
+                isDemoMode: createMode === "demo",
+                botCount,
+              });
+            }}
+          >
+            <h3>2. ルーム作成</h3>
+            <div className="mode-switch">
+              <button type="button" className={createMode === "normal" ? "" : "secondary"} onClick={() => setCreateMode("normal")}>
+                通常モード
+              </button>
+              <button type="button" className={createMode === "demo" ? "" : "secondary"} onClick={() => setCreateMode("demo")}>
+                デモモード
               </button>
             </div>
-          ) : null}
-          {createMode === "demo" ? (
             <label>
-              Bot人数
-              <select value={botCount} onChange={(event) => setBotCount(Number(event.target.value))}>
-                <option value={2}>2人</option>
-                <option value={3}>3人</option>
-                <option value={4}>4人</option>
-              </select>
+              ルームID
+              <input value={createRoomId} onChange={(event) => setCreateRoomId(event.target.value.toUpperCase())} />
             </label>
-          ) : null}
-          <p className="mode-caption">
-            {createMode === "demo"
-              ? "1人でも開始可能です。Bot_A 〜 Bot_D から不足人数を自動補完します。"
-              : "通常モードは 3〜5 人でのプレイを想定しています。"}
-          </p>
-          <button type="submit" disabled={!authUser}>
-            新しいルームを作る
-          </button>
-          {!authUser ? <p className="mode-caption">ルーム作成はファシリログイン後に利用できます。</p> : null}
-        </form>
+            <label>
+              ファシリ名
+              <input value={authUser?.displayName ?? ""} readOnly placeholder="ファシリログインすると表示されます" />
+            </label>
+            {createMode === "demo" ? (
+              <label>
+                デモプレイヤー画像
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg"
+                  onChange={async (event) => {
+                    const nextFile = event.target.files?.[0] ?? null;
+                    const nextUrl = await readImageFile(nextFile);
+                    setCreateAvatarUrl(nextUrl);
+                  }}
+                />
+              </label>
+            ) : null}
+            {createMode === "demo" && createAvatarUrl ? (
+              <div className="avatar-upload-preview">
+                <img src={createAvatarUrl} alt="デモプレイヤー画像プレビュー" />
+                <button type="button" className="secondary" onClick={() => setCreateAvatarUrl("")}>
+                  画像を外す
+                </button>
+              </div>
+            ) : null}
+            {createMode === "demo" ? (
+              <label>
+                Bot人数
+                <select value={botCount} onChange={(event) => setBotCount(Number(event.target.value))}>
+                  <option value={2}>2人</option>
+                  <option value={3}>3人</option>
+                  <option value={4}>4人</option>
+                </select>
+              </label>
+            ) : null}
+            <p className="mode-caption">
+              {createMode === "demo"
+                ? "1人でも開始可能です。Bot_A 〜 Bot_D から不足人数を自動補完します。"
+                : "通常モードは 3〜5 人でのプレイを想定しています。"}
+            </p>
+            <button type="submit" disabled={!authUser}>
+              新しいルームを作る
+            </button>
+            {!authUser ? <p className="mode-caption">まずは上のファシリログインを完了してください。</p> : null}
+          </form>
+        </section>
 
         <form
           className="panel"
