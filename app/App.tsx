@@ -43,16 +43,6 @@ export const App = () => {
       return;
     }
 
-    if (!selectedPlayerId || !room.players.some((player) => player.id === selectedPlayerId)) {
-      setSelectedPlayerId(playerId || room.players[0]?.id || "");
-    }
-  }, [playerId, room, selectedPlayerId]);
-
-  useEffect(() => {
-    if (!room) {
-      return;
-    }
-
     console.log("[board-debug][client]", {
       roomId: room.roomId,
       boardVersion: room.boardVersion,
@@ -61,6 +51,23 @@ export const App = () => {
   }, [room]);
 
   const isFacilitator = room?.facilitatorId === playerId;
+
+  useEffect(() => {
+    if (!room) {
+      return;
+    }
+
+    if (!room.isDemoMode && !isFacilitator) {
+      if (playerId && selectedPlayerId !== playerId) {
+        setSelectedPlayerId(playerId);
+      }
+      return;
+    }
+
+    if (!selectedPlayerId || !room.players.some((player) => player.id === selectedPlayerId)) {
+      setSelectedPlayerId(playerId || room.players[0]?.id || "");
+    }
+  }, [isFacilitator, playerId, room, selectedPlayerId]);
 
   useEffect(() => {
     if (!room || room.isDemoMode) {
