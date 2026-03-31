@@ -80,7 +80,7 @@ export const PlayerPanel = ({
                       className={`strength-tag ${getStrengthCategoryClassName(card.category)}`}
                     >
                       <span className="strength-tag-category">{card.category}</span>
-                      {card.text}
+                      {card.id}. {card.text}
                     </span>
                   ))}
                 </div>

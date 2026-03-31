@@ -105,7 +105,7 @@ export const PlayerPeekPanel = ({ players, currentPlayerId }: PlayerPeekPanelPro
                 {selectedPlayer.strengthCards.map((card) => (
                   <span key={`${selectedPlayer.id}_peek_strength_${card.id}`} className={`strength-tag ${getStrengthCategoryClassName(card.category)}`}>
                     <span className="strength-tag-category">{card.category}</span>
-                    {card.text}
+                    {card.id}. {card.text}
                   </span>
                 ))}
               </div>

@@ -141,7 +141,7 @@ export const StrengthCardPanel = ({
                 .map((card) => (
                   <span key={card.id} className={`strength-tag ${getStrengthCategoryClassName(card.category)}`}>
                     <span className="strength-tag-category">{card.category}</span>
-                    {card.text}
+                    {card.id}. {card.text}
                   </span>
                 ))}
             </div>
@@ -159,7 +159,7 @@ export const StrengthCardPanel = ({
                   {player.strengthCards.map((card) => (
                     <span key={`${player.id}_${card.id}`} className={`strength-tag ${getStrengthCategoryClassName(card.category)}`}>
                       <span className="strength-tag-category">{card.category}</span>
-                      {card.text}
+                      {card.id}. {card.text}
                     </span>
                   ))}
                 </div>
@@ -258,7 +258,7 @@ export const StrengthCardPanel = ({
                   <div>
                     <span className={`strength-tag ${getStrengthCategoryClassName(gift.strengthCard.category)}`}>
                       <span className="strength-tag-category">{gift.strengthCard.category}</span>
-                      {gift.strengthCard.text}
+                      {gift.strengthCard.id}. {gift.strengthCard.text}
                     </span>
                     <p>
                       {fromName} → {toPlayer?.name ?? "不明"}
