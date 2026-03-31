@@ -23,7 +23,7 @@
   {
     "id": "e04",
     "title": "強みアップデート",
-    "description": "自分の手元の強みカード1枚を見直し、「今の自分にもっと近い」と思う別の1枚に交換してよい",
+    "description": "今の自分に近いと思う強みに見直します。1枚入れ替えてください",
     "eventType": "strength",
     "effectType": "strength_update"
   },

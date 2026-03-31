@@ -174,7 +174,7 @@ export const StrengthCardPanel = ({
       <div className="strength-give-box strength-move-box">
         <div className="section-header">
           <h3>強みカードを自由に移動</h3>
-          <p>未配布にも戻せます</p>
+          <p>強みアップデート時は、いったん未配布に戻してから配り直せます</p>
         </div>
         <div className="strength-history-filters strength-move-grid">
           <label>
