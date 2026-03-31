@@ -10,10 +10,12 @@ import { PlayerPeekPanel } from "../components/PlayerPeekPanel";
 import { PlayerPanel } from "../components/PlayerPanel";
 import { RoleSwitcher } from "../components/RoleSwitcher";
 import { StrengthCardPanel } from "../components/StrengthCardPanel";
+import { useFacilitatorAuth } from "../hooks/useFacilitatorAuth";
 import { useGameSocket } from "../hooks/useGameSocket";
 
 export const App = () => {
   const printGuideUrl = "/guide-print.html";
+  const facilitatorAuth = useFacilitatorAuth();
   const {
     room,
     playerId,
@@ -35,7 +37,7 @@ export const App = () => {
     moveStrengthCard,
     undoStrengthGift,
     runDeveloperAction,
-  } = useGameSocket();
+  } = useGameSocket(facilitatorAuth.authToken);
   const [viewMode, setViewMode] = useState<"facilitator" | "player">("facilitator");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [helpMode, setHelpMode] = useState<"rules" | "strengths" | null>(null);
@@ -80,7 +82,22 @@ export const App = () => {
   }, [isFacilitator, room]);
 
   if (!room || !playerId) {
-    return <Lobby onCreateRoom={createRoom} onJoinRoom={joinRoom} errorMessage={errorMessage} />;
+    return (
+      <Lobby
+        onCreateRoom={createRoom}
+        onJoinRoom={joinRoom}
+        authUser={facilitatorAuth.authUser}
+        authLoading={facilitatorAuth.authLoading}
+        authError={facilitatorAuth.authError}
+        facilitatorAccounts={facilitatorAuth.accounts}
+        onLogin={facilitatorAuth.login}
+        onLogout={facilitatorAuth.logout}
+        onChangePassword={facilitatorAuth.changePassword}
+        onCreateFacilitatorAccount={facilitatorAuth.createAccount}
+        onResetFacilitatorPassword={facilitatorAuth.resetPassword}
+        errorMessage={errorMessage}
+      />
+    );
   }
 
   const currentPlayer = room.players.find((player) => player.id === playerId);
@@ -129,7 +146,7 @@ export const App = () => {
             </button>
           </div>
         </section>
-        <HelpPanel mode={helpMode} onClose={() => setHelpMode(null)} />
+        <HelpPanel mode={helpMode} usedStrengthCardIds={room.usedStrengthCardIds} onClose={() => setHelpMode(null)} />
       </main>
     );
   }

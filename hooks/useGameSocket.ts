@@ -20,6 +20,7 @@ export interface JoinPayload {
   roomId: string;
   name: string;
   isFacilitator: boolean;
+  authToken?: string;
   avatarUrl?: string;
   isDemoMode?: boolean;
   botCount?: number;
@@ -40,7 +41,7 @@ interface ActionResult {
   room?: RoomState;
 }
 
-export const useGameSocket = () => {
+export const useGameSocket = (authToken?: string | null) => {
   const socketRef = useRef<Socket | null>(null);
   const [room, setRoom] = useState<RoomState | null>(null);
   const [playerId, setPlayerId] = useState<string>("");
@@ -89,6 +90,7 @@ export const useGameSocket = () => {
             roomId: session.roomId,
             actorId: session.actorId,
             role: session.role,
+            authToken: session.role === "facilitator" ? authToken ?? undefined : undefined,
           },
           (response: ActionResult) => {
             if (response.ok && response.playerId) {
@@ -111,7 +113,7 @@ export const useGameSocket = () => {
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [authToken]);
 
   const emitWithAck = <T extends ActionResult, P extends object = Record<string, unknown>>(eventName: string, payload: P) =>
     new Promise<T>((resolve) => {
@@ -161,7 +163,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("game:start", { roomId: room.roomId, playerId });
+    const response = await emitWithAck<ActionResult>("game:start", { roomId: room.roomId, playerId, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "ゲーム開始に失敗しました。");
     }
@@ -185,7 +187,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("game:endTurn", { roomId: room.roomId, playerId });
+    const response = await emitWithAck<ActionResult>("game:endTurn", { roomId: room.roomId, playerId, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "ターン終了に失敗しました。");
     }
@@ -196,7 +198,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("game:close", { roomId: room.roomId, playerId });
+    const response = await emitWithAck<ActionResult>("game:close", { roomId: room.roomId, playerId, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "ゲーム終了に失敗しました。");
     }
@@ -207,7 +209,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("room:forceClose", { roomId: room.roomId, playerId });
+    const response = await emitWithAck<ActionResult>("room:forceClose", { roomId: room.roomId, playerId, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "ルーム強制終了に失敗しました。");
     }
@@ -218,7 +220,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("game:setOrder", { roomId: room.roomId, playerId, orderedPlayerIds });
+    const response = await emitWithAck<ActionResult>("game:setOrder", { roomId: room.roomId, playerId, orderedPlayerIds, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "順番変更に失敗しました。");
     }
@@ -229,7 +231,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("game:rollOrderDice", { roomId: room.roomId, playerId });
+    const response = await emitWithAck<ActionResult>("game:rollOrderDice", { roomId: room.roomId, playerId, authToken });
     if (!response.ok) {
       setErrorMessage(response.message ?? "順番決めサイコロに失敗しました。");
     }
@@ -243,6 +245,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("game:movePlayer", {
       roomId: room.roomId,
       playerId,
+      authToken,
       targetPlayerId,
       position,
     });
@@ -259,6 +262,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("game:drawOrderLottery", {
       roomId: room.roomId,
       playerId,
+      authToken,
       targetPlayerId,
     });
     if (!response.ok) {
@@ -285,6 +289,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("strength:give", {
       roomId: room.roomId,
       playerId,
+      authToken,
       targetPlayerId,
       strengthCardId,
     });
@@ -301,6 +306,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("strength:drawRandom", {
       roomId: room.roomId,
       playerId,
+      authToken,
       targetPlayerId,
     });
     if (!response.ok) {
@@ -316,6 +322,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("strength:undo", {
       roomId: room.roomId,
       playerId,
+      authToken,
       giftId,
     });
     if (!response.ok) {
@@ -331,6 +338,7 @@ export const useGameSocket = () => {
     const response = await emitWithAck<ActionResult>("strength:move", {
       roomId: room.roomId,
       playerId,
+      authToken,
       strengthCardId,
       fromPlayerId,
       toPlayerId,
@@ -345,7 +353,7 @@ export const useGameSocket = () => {
       return;
     }
 
-    const response = await emitWithAck<ActionResult>("dev:action", { roomId: room.roomId, playerId, action, payload });
+    const response = await emitWithAck<ActionResult>("dev:action", { roomId: room.roomId, playerId, authToken, action, payload });
     if (!response.ok) {
       setErrorMessage(response.message ?? "DeveloperPanel の操作に失敗しました。");
     }

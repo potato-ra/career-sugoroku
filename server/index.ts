@@ -1,9 +1,19 @@
 import express from "express";
 import { createServer } from "node:http";
+import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Server } from "socket.io";
 import { BOT_NAMES, runBotEndTurn, runBotRoll } from "../lib/botEngine";
+import {
+  createFacilitatorAccountRecord,
+  findFacilitatorAccount,
+  loadFacilitatorAccounts,
+  sanitizeFacilitatorAccount,
+  saveFacilitatorAccounts,
+  updateFacilitatorPassword,
+  verifyPassword,
+} from "./auth";
 import {
   addPlayerToRoom,
   advanceTurn,
@@ -42,6 +52,7 @@ const io = new Server(httpServer, {
 
 const gameData = loadStaticGameData();
 const rooms = new Map<string, RoomState>();
+const facilitatorSessions = new Map<string, { loginId: string; displayName: string; role: "admin" | "facilitator"; mustChangePassword: boolean }>();
 const socketRoomMap = new Map<string, { roomId: string; actorId: string; role: "facilitator" | "player" }>();
 const botTimers = new Map<string, NodeJS.Timeout[]>();
 const reconnectTimers = new Map<string, NodeJS.Timeout>();
@@ -56,6 +67,194 @@ console.log("indexExists:", fs.existsSync(indexPath));
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.url}`);
   next();
+});
+
+app.use(express.json());
+
+const getBearerToken = (request: express.Request) => {
+  const authHeader = request.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  return authHeader.slice("Bearer ".length);
+};
+
+const getSessionByToken = (token?: string | null) => {
+  if (!token) {
+    return null;
+  }
+
+  return facilitatorSessions.get(token) ?? null;
+};
+
+const createSessionPayload = (token: string) => {
+  const session = facilitatorSessions.get(token);
+  if (!session) {
+    return null;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  return {
+    user: {
+      loginId: session.loginId,
+      displayName: session.displayName,
+      role: session.role,
+      mustChangePassword: session.mustChangePassword,
+    },
+    accounts: session.role === "admin" ? accounts.map(sanitizeFacilitatorAccount) : undefined,
+  };
+};
+
+const requireAdminSession = (token?: string | null) => {
+  const session = getSessionByToken(token);
+  if (!session || session.role !== "admin") {
+    return null;
+  }
+
+  return session;
+};
+
+app.post("/api/auth/login", (request, response) => {
+  const loginId = String(request.body?.loginId ?? "").trim().toLowerCase();
+  const password = String(request.body?.password ?? "");
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, loginId);
+
+  if (!account || !account.isActive || !verifyPassword(password, account.passwordHash)) {
+    response.status(401).json({ ok: false, message: "ログインIDまたはパスワードが正しくありません。" });
+    return;
+  }
+
+  const token = randomBytes(24).toString("hex");
+  facilitatorSessions.set(token, {
+    loginId: account.loginId,
+    displayName: account.displayName,
+    role: account.role,
+    mustChangePassword: account.mustChangePassword,
+  });
+
+  response.json({ ok: true, token, ...createSessionPayload(token) });
+});
+
+app.get("/api/auth/me", (request, response) => {
+  const token = getBearerToken(request);
+  const payload = token ? createSessionPayload(token) : null;
+
+  if (!payload) {
+    response.status(401).json({ ok: false, message: "ログインが必要です。" });
+    return;
+  }
+
+  response.json({ ok: true, ...payload });
+});
+
+app.post("/api/auth/logout", (request, response) => {
+  const token = getBearerToken(request);
+  if (token) {
+    facilitatorSessions.delete(token);
+  }
+  response.json({ ok: true });
+});
+
+app.post("/api/auth/change-password", (request, response) => {
+  const token = getBearerToken(request);
+  const session = getSessionByToken(token);
+  if (!session) {
+    response.status(401).json({ ok: false, message: "ログインが必要です。" });
+    return;
+  }
+
+  const currentPassword = String(request.body?.currentPassword ?? "");
+  const nextPassword = String(request.body?.nextPassword ?? "");
+  if (nextPassword.length < 8) {
+    response.status(400).json({ ok: false, message: "新しいパスワードは8文字以上で入力してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, session.loginId);
+  if (!account || !verifyPassword(currentPassword, account.passwordHash)) {
+    response.status(400).json({ ok: false, message: "現在のパスワードが正しくありません。" });
+    return;
+  }
+
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId ? updateFacilitatorPassword(entry, nextPassword, false) : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+  facilitatorSessions.set(token!, {
+    ...session,
+    mustChangePassword: false,
+  });
+
+  response.json({ ok: true });
+});
+
+app.get("/api/facilitators", (request, response) => {
+  const session = requireAdminSession(getBearerToken(request));
+  if (!session) {
+    response.status(403).json({ ok: false, message: "管理者のみ閲覧できます。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts().map(sanitizeFacilitatorAccount);
+  response.json({ ok: true, accounts });
+});
+
+app.post("/api/facilitators", (request, response) => {
+  const session = requireAdminSession(getBearerToken(request));
+  if (!session) {
+    response.status(403).json({ ok: false, message: "管理者のみ発行できます。" });
+    return;
+  }
+
+  const loginId = String(request.body?.loginId ?? "").trim().toLowerCase();
+  const displayName = String(request.body?.displayName ?? "").trim();
+  const temporaryPassword = String(request.body?.temporaryPassword ?? "");
+
+  if (!loginId || !displayName || temporaryPassword.length < 8) {
+    response.status(400).json({ ok: false, message: "ログインID・表示名・8文字以上の仮パスワードを入力してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  if (findFacilitatorAccount(accounts, loginId)) {
+    response.status(409).json({ ok: false, message: "そのログインIDはすでに使用中です。" });
+    return;
+  }
+
+  accounts.push(createFacilitatorAccountRecord(loginId, displayName, temporaryPassword));
+  saveFacilitatorAccounts(accounts);
+  response.json({ ok: true });
+});
+
+app.post("/api/facilitators/:loginId/reset-password", (request, response) => {
+  const session = requireAdminSession(getBearerToken(request));
+  if (!session) {
+    response.status(403).json({ ok: false, message: "管理者のみ再発行できます。" });
+    return;
+  }
+
+  const loginId = String(request.params.loginId ?? "").trim().toLowerCase();
+  const temporaryPassword = String(request.body?.temporaryPassword ?? "");
+  if (!loginId || temporaryPassword.length < 8) {
+    response.status(400).json({ ok: false, message: "8文字以上の仮パスワードを入力してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, loginId);
+  if (!account) {
+    response.status(404).json({ ok: false, message: "対象アカウントが見つかりません。" });
+    return;
+  }
+
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId ? updateFacilitatorPassword(entry, temporaryPassword, true) : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+  response.json({ ok: true });
 });
 
 app.get("/health", (_req, res) => {
@@ -124,19 +323,9 @@ const scheduleReconnectExpiry = (actorId: string, callback: () => void) => {
   reconnectTimers.set(actorId, timer);
 };
 
-const findAvailableRoomId = (requestedRoomId: string) => {
-  if (!rooms.has(requestedRoomId)) {
-    return requestedRoomId;
-  }
-
-  for (let suffix = 2; suffix <= 99; suffix += 1) {
-    const candidate = `${requestedRoomId}-${suffix}`;
-    if (!rooms.has(candidate)) {
-      return candidate;
-    }
-  }
-
-  return `${requestedRoomId}-${Date.now().toString().slice(-4)}`;
+const isAuthorizedFacilitator = (room: RoomState, playerId: string, authToken?: string | null) => {
+  const session = getSessionByToken(authToken);
+  return Boolean(session && room.facilitatorId === playerId);
 };
 
 const addBotsToRoom = (room: RoomState, count: number) => {
@@ -256,19 +445,29 @@ function scheduleBotAutomation(roomId: string) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("room:create", ({ roomId, name, isFacilitator, isDemoMode, botCount, avatarUrl }, callback) => {
+  socket.on("room:create", ({ roomId, name, isFacilitator, isDemoMode, botCount, avatarUrl, authToken }, callback) => {
     const trimmedRoomId = (roomId || "").trim().toUpperCase();
-    const trimmedName = (name || "").trim();
+    const session = getSessionByToken(authToken);
+    const trimmedName = session?.displayName ?? (name || "").trim();
 
-    if (!trimmedRoomId || !trimmedName) {
-      callback?.({ ok: false, message: "ルームIDと名前を入力してください。" });
+    if (!session || !isFacilitator) {
+      callback?.({ ok: false, message: "ファシリログインが必要です。" });
       return;
     }
 
-    const nextRoomId = findAvailableRoomId(trimmedRoomId);
+    if (!trimmedRoomId || !trimmedName) {
+      callback?.({ ok: false, message: "ルームIDを入力してください。" });
+      return;
+    }
+
+    if (rooms.has(trimmedRoomId)) {
+      callback?.({ ok: false, message: "そのルームIDは使用中です。" });
+      return;
+    }
+
     const latestBoard = loadLatestBoardSnapshot();
 
-    let room = createRoomState(nextRoomId, cloneBoard(latestBoard.board), latestBoard.boardVersion, Boolean(isDemoMode));
+    let room = createRoomState(trimmedRoomId, cloneBoard(latestBoard.board), latestBoard.boardVersion, Boolean(isDemoMode));
     const facilitatorId = assignFacilitator(room, trimmedName, socket.id);
     if (room.isDemoMode) {
       room = ensureDemoLocalPlayer(room, socket.id, avatarUrl);
@@ -276,21 +475,18 @@ io.on("connection", (socket) => {
       room.logs.unshift(createLog(`デモモードで開始準備中です。Bot を ${room.players.filter((entry) => entry.isBot).length} 人追加しました`));
     }
     console.log("[board-debug][server] room:create", {
-      roomId: nextRoomId,
+      roomId: trimmedRoomId,
       boardVersion: room.boardVersion,
       spaces31to39: room.board.filter((space) => space.id >= 31 && space.id <= 39).map((space) => ({ id: space.id, type: space.type })),
     });
-    if (nextRoomId !== trimmedRoomId) {
-      room.logs.unshift(createLog(`ルームIDが使用中だったため ${nextRoomId} で作成しました`));
-    }
-    rooms.set(nextRoomId, room);
-    socketRoomMap.set(socket.id, { roomId: nextRoomId, actorId: facilitatorId, role: "facilitator" });
-    socket.join(nextRoomId);
-    emitRoomState(nextRoomId, room);
+    rooms.set(trimmedRoomId, room);
+    socketRoomMap.set(socket.id, { roomId: trimmedRoomId, actorId: facilitatorId, role: "facilitator" });
+    socket.join(trimmedRoomId);
+    emitRoomState(trimmedRoomId, room);
     callback?.({ ok: true, room, playerId: facilitatorId });
   });
 
-  socket.on("room:restore", ({ roomId, actorId, role }, callback) => {
+  socket.on("room:restore", ({ roomId, actorId, role, authToken }, callback) => {
     const trimmedRoomId = (roomId || "").trim().toUpperCase();
     const room = rooms.get(trimmedRoomId);
 
@@ -300,6 +496,11 @@ io.on("connection", (socket) => {
     }
 
     if (role === "facilitator") {
+      if (!getSessionByToken(authToken)) {
+        callback?.({ ok: false, message: "ファシリログインが必要です。" });
+        return;
+      }
+
       if (room.facilitatorId !== actorId) {
         callback?.({ ok: false, message: "ファシリテーター情報を復元できませんでした。" });
         return;
@@ -365,14 +566,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true, room, playerId: player.id });
   });
 
-  socket.on("game:start", ({ roomId, playerId }, callback) => {
+  socket.on("game:start", ({ roomId, playerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "ゲーム開始はファシリテーターのみ可能です。" });
       return;
     }
@@ -414,14 +615,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true, dice: resolvedDice });
   });
 
-  socket.on("game:endTurn", ({ roomId, playerId }, callback) => {
+  socket.on("game:endTurn", ({ roomId, playerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room || !room.started) {
       callback?.({ ok: false, message: "ゲームが開始されていません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "ターン終了はファシリテーターのみ操作できます。" });
       return;
     }
@@ -431,14 +632,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("game:close", ({ roomId, playerId }, callback) => {
+  socket.on("game:close", ({ roomId, playerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "ゲーム終了はファシリテーターのみ操作できます。" });
       return;
     }
@@ -449,14 +650,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("room:forceClose", ({ roomId, playerId }, callback) => {
+  socket.on("room:forceClose", ({ roomId, playerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "ルーム強制終了はファシリテーターのみ操作できます。" });
       return;
     }
@@ -476,14 +677,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("game:setOrder", ({ roomId, playerId, orderedPlayerIds }, callback) => {
+  socket.on("game:setOrder", ({ roomId, playerId, orderedPlayerIds, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "順番変更はファシリテーターのみ操作できます。" });
       return;
     }
@@ -498,14 +699,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("game:rollOrderDice", ({ roomId, playerId }, callback) => {
+  socket.on("game:rollOrderDice", ({ roomId, playerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "順番決めサイコロはファシリテーターのみ操作できます。" });
       return;
     }
@@ -544,14 +745,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("game:movePlayer", ({ roomId, playerId, targetPlayerId, position }, callback) => {
+  socket.on("game:movePlayer", ({ roomId, playerId, targetPlayerId, position, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "プレイヤー移動はファシリテーターのみ操作できます。" });
       return;
     }
@@ -591,14 +792,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("strength:give", ({ roomId, playerId, targetPlayerId, strengthCardId }, callback) => {
+  socket.on("strength:give", ({ roomId, playerId, targetPlayerId, strengthCardId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "強みカードの配布はファシリテーターのみ操作できます。" });
       return;
     }
@@ -613,14 +814,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("strength:drawRandom", ({ roomId, playerId, targetPlayerId }, callback) => {
+  socket.on("strength:drawRandom", ({ roomId, playerId, targetPlayerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "強みカードのランダム配布はファシリテーターのみ操作できます。" });
       return;
     }
@@ -635,14 +836,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("strength:move", ({ roomId, playerId, strengthCardId, fromPlayerId, toPlayerId }, callback) => {
+  socket.on("strength:move", ({ roomId, playerId, strengthCardId, fromPlayerId, toPlayerId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "強みカードの移動はファシリテーターのみ操作できます。" });
       return;
     }
@@ -665,14 +866,14 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("strength:undo", ({ roomId, playerId, giftId }, callback) => {
+  socket.on("strength:undo", ({ roomId, playerId, giftId, authToken }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
       callback?.({ ok: false, message: "ルームが見つかりません。" });
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "強みカード配布の取り消しはファシリテーターのみ操作できます。" });
       return;
     }
@@ -687,7 +888,7 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
-  socket.on("dev:action", ({ roomId, playerId, action, payload }, callback) => {
+  socket.on("dev:action", ({ roomId, playerId, authToken, action, payload }, callback) => {
     if (process.env.NODE_ENV === "production") {
       callback?.({ ok: false, message: "DeveloperPanel は development 環境でのみ利用できます。" });
       return;
@@ -699,7 +900,7 @@ io.on("connection", (socket) => {
       return;
     }
 
-    if (room.facilitatorId !== playerId) {
+    if (!isAuthorizedFacilitator(room, playerId, authToken)) {
       callback?.({ ok: false, message: "DeveloperPanel はファシリテーターのみ操作できます。" });
       return;
     }

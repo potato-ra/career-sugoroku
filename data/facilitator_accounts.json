@@ -1,0 +1,12 @@
+[
+  {
+    "loginId": "owner",
+    "displayName": "オーナー",
+    "role": "admin",
+    "passwordHash": "cf5d497d5163dc76b45a91c1f902982b:ccd22b1d0cfcf5e25f7a0f0a78963901add8c570d78ed2c155b4e0a440ad501822c4f3b1a97d3ed1949a0c860176b9e1e04095b7aa8a0a3dec5368dc0147f863",
+    "isActive": true,
+    "mustChangePassword": true,
+    "createdAt": "2026-04-01T00:00:00.000Z",
+    "updatedAt": "2026-04-01T00:00:00.000Z"
+  }
+]

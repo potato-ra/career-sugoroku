@@ -1,14 +1,36 @@
 import { useState } from "react";
+import type { FacilitatorAccountSummary, FacilitatorAuthUser } from "../hooks/useFacilitatorAuth";
 import type { JoinPayload } from "../hooks/useGameSocket";
 
 interface LobbyProps {
   onCreateRoom: (payload: JoinPayload) => Promise<unknown>;
   onJoinRoom: (payload: JoinPayload) => Promise<unknown>;
+  authUser: FacilitatorAuthUser | null;
+  authLoading: boolean;
+  authError?: string;
+  facilitatorAccounts: FacilitatorAccountSummary[];
+  onLogin: (loginId: string, password: string) => Promise<boolean>;
+  onLogout: () => Promise<void> | void;
+  onChangePassword: (currentPassword: string, nextPassword: string) => Promise<void>;
+  onCreateFacilitatorAccount: (loginId: string, displayName: string, temporaryPassword: string) => Promise<void>;
+  onResetFacilitatorPassword: (loginId: string, temporaryPassword: string) => Promise<void>;
   errorMessage?: string;
 }
 
-export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) => {
-  const [createName, setCreateName] = useState("");
+export const Lobby = ({
+  onCreateRoom,
+  onJoinRoom,
+  authUser,
+  authLoading,
+  authError,
+  facilitatorAccounts,
+  onLogin,
+  onLogout,
+  onChangePassword,
+  onCreateFacilitatorAccount,
+  onResetFacilitatorPassword,
+  errorMessage,
+}: LobbyProps) => {
   const [createRoomId, setCreateRoomId] = useState("CAREER01");
   const [createAvatarUrl, setCreateAvatarUrl] = useState("");
   const [joinName, setJoinName] = useState("");
@@ -16,6 +38,16 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
   const [joinAvatarUrl, setJoinAvatarUrl] = useState("");
   const [createMode, setCreateMode] = useState<"normal" | "demo">("normal");
   const [botCount, setBotCount] = useState(2);
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [nextPassword, setNextPassword] = useState("");
+  const [newFacilitatorLoginId, setNewFacilitatorLoginId] = useState("");
+  const [newFacilitatorDisplayName, setNewFacilitatorDisplayName] = useState("");
+  const [newTemporaryPassword, setNewTemporaryPassword] = useState("");
+  const [resetTargetLoginId, setResetTargetLoginId] = useState("");
+  const [resetTemporaryPassword, setResetTemporaryPassword] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
 
   const readImageFile = async (file: File | null) => {
     if (!file) {
@@ -43,12 +75,80 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
       <div className="lobby-grid">
         <form
           className="panel"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            const ok = await onLogin(loginId, password);
+            if (ok) {
+              setPassword("");
+              setAccountMessage("ファシリログインしました。");
+            }
+          }}
+        >
+          <h2>ファシリログイン</h2>
+          {authUser ? (
+            <>
+              <p className="mode-caption">
+                ログイン中: {authUser.displayName} ({authUser.loginId})
+              </p>
+              <div className="inline-actions">
+                <span className={`mode-badge ${authUser.role === "admin" ? "demo" : "perspective"}`}>
+                  {authUser.role === "admin" ? "管理者" : "ファシリ"}
+                </span>
+                {authUser.mustChangePassword ? <span className="mode-badge normal">パスワード変更が必要</span> : null}
+              </div>
+              <label>
+                現在のパスワード
+                <input type="password" value={currentPassword} onChange={(event) => setCurrentPassword(event.target.value)} />
+              </label>
+              <label>
+                新しいパスワード
+                <input type="password" value={nextPassword} onChange={(event) => setNextPassword(event.target.value)} />
+              </label>
+              <div className="inline-actions">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await onChangePassword(currentPassword, nextPassword);
+                    setCurrentPassword("");
+                    setNextPassword("");
+                    setAccountMessage("パスワードを変更しました。");
+                  }}
+                >
+                  パスワード変更
+                </button>
+                <button type="button" className="secondary" onClick={() => void onLogout()}>
+                  ログアウト
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <label>
+                ログインID
+                <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="owner" />
+              </label>
+              <label>
+                パスワード
+                <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+              </label>
+              <button type="submit" disabled={authLoading}>
+                ファシリログイン
+              </button>
+            </>
+          )}
+          {authError ? <p className="error-text">{authError}</p> : null}
+          {accountMessage ? <p className="mode-caption">{accountMessage}</p> : null}
+        </form>
+
+        <form
+          className="panel"
           onSubmit={(event) => {
             event.preventDefault();
             void onCreateRoom({
               roomId: createRoomId,
-              name: createName,
+              name: authUser?.displayName ?? "",
               isFacilitator: true,
+              authToken: authUser ? window.localStorage.getItem("career-sugoroku-auth") ?? undefined : undefined,
               avatarUrl: createMode === "demo" ? createAvatarUrl : undefined,
               isDemoMode: createMode === "demo",
               botCount,
@@ -69,8 +169,8 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
             <input value={createRoomId} onChange={(event) => setCreateRoomId(event.target.value.toUpperCase())} />
           </label>
           <label>
-            名前
-            <input value={createName} onChange={(event) => setCreateName(event.target.value)} placeholder="ファシリテーター名" />
+            ファシリ名
+            <input value={authUser?.displayName ?? ""} readOnly placeholder="ファシリログインすると表示されます" />
           </label>
           {createMode === "demo" ? (
             <label>
@@ -109,7 +209,10 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
               ? "1人でも開始可能です。Bot_A 〜 Bot_D から不足人数を自動補完します。"
               : "通常モードは 3〜5 人でのプレイを想定しています。"}
           </p>
-          <button type="submit">新しいルームを作る</button>
+          <button type="submit" disabled={!authUser}>
+            新しいルームを作る
+          </button>
+          {!authUser ? <p className="mode-caption">ルーム作成はファシリログイン後に利用できます。</p> : null}
         </form>
 
         <form
@@ -151,6 +254,74 @@ export const Lobby = ({ onCreateRoom, onJoinRoom, errorMessage }: LobbyProps) =>
           <p className="mode-caption">既存の通常モード / デモモードどちらのルームにも参加できます。</p>
           <button type="submit">ルームに参加する</button>
         </form>
+
+        {authUser?.role === "admin" ? (
+          <section className="panel">
+            <h2>ファシリアカウント管理</h2>
+            <label>
+              新しいログインID
+              <input value={newFacilitatorLoginId} onChange={(event) => setNewFacilitatorLoginId(event.target.value)} />
+            </label>
+            <label>
+              表示名
+              <input value={newFacilitatorDisplayName} onChange={(event) => setNewFacilitatorDisplayName(event.target.value)} />
+            </label>
+            <label>
+              仮パスワード
+              <input value={newTemporaryPassword} onChange={(event) => setNewTemporaryPassword(event.target.value)} />
+            </label>
+            <button
+              type="button"
+              onClick={async () => {
+                await onCreateFacilitatorAccount(newFacilitatorLoginId, newFacilitatorDisplayName, newTemporaryPassword);
+                setNewFacilitatorLoginId("");
+                setNewFacilitatorDisplayName("");
+                setNewTemporaryPassword("");
+                setAccountMessage("ファシリアカウントを発行しました。");
+              }}
+            >
+              アカウント発行
+            </button>
+            <label>
+              再発行対象
+              <select value={resetTargetLoginId} onChange={(event) => setResetTargetLoginId(event.target.value)}>
+                <option value="">選択してください</option>
+                {facilitatorAccounts.map((account) => (
+                  <option key={account.loginId} value={account.loginId}>
+                    {account.displayName} ({account.loginId})
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              新しい仮パスワード
+              <input value={resetTemporaryPassword} onChange={(event) => setResetTemporaryPassword(event.target.value)} />
+            </label>
+            <button
+              type="button"
+              className="secondary"
+              onClick={async () => {
+                await onResetFacilitatorPassword(resetTargetLoginId, resetTemporaryPassword);
+                setResetTargetLoginId("");
+                setResetTemporaryPassword("");
+                setAccountMessage("仮パスワードを再発行しました。");
+              }}
+              disabled={!resetTargetLoginId}
+            >
+              仮パスワード再発行
+            </button>
+            <div className="account-list">
+              {facilitatorAccounts.map((account) => (
+                <div key={account.loginId} className="account-row">
+                  <strong>{account.displayName}</strong>
+                  <span>{account.loginId}</span>
+                  <span>{account.role === "admin" ? "管理者" : "ファシリ"}</span>
+                  <span>{account.mustChangePassword ? "初回変更待ち" : "利用中"}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
 
       {errorMessage ? <p className="error-text">{errorMessage}</p> : null}
