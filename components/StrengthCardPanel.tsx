@@ -10,9 +10,11 @@ interface StrengthCardPanelProps {
   facilitatorId?: string | null;
   facilitatorName?: string | null;
   strengthGiftHistory: StrengthGift[];
+  usedStrengthCardIds: number[];
   title: string;
   onGiveStrengthCard: (targetPlayerId: string, strengthCardId: number) => void;
   onGiveRandomStrengthCard: (targetPlayerId: string) => void;
+  onMoveStrengthCard: (strengthCardId: number, fromPlayerId?: string | null, toPlayerId?: string | null) => void;
   onUndoStrengthGift: (giftId: string) => void;
 }
 
@@ -23,9 +25,11 @@ export const StrengthCardPanel = ({
   facilitatorId,
   facilitatorName,
   strengthGiftHistory,
+  usedStrengthCardIds,
   title,
   onGiveStrengthCard,
   onGiveRandomStrengthCard,
+  onMoveStrengthCard,
   onUndoStrengthGift,
 }: StrengthCardPanelProps) => {
   const currentPlayer = players.find((player) => player.id === currentPlayerId);
@@ -35,6 +39,9 @@ export const StrengthCardPanel = ({
   const defaultTargetId = players.find((player) => player.id !== currentPlayerId)?.id ?? "";
   const [targetPlayerId, setTargetPlayerId] = useState(defaultTargetId);
   const [selectedCardId, setSelectedCardId] = useState<number>(availableCards[0]?.id ?? 1);
+  const [moveSourceId, setMoveSourceId] = useState<string>("pool");
+  const [moveTargetId, setMoveTargetId] = useState<string>(players[0]?.id ?? "");
+  const [moveCardId, setMoveCardId] = useState<number>(availableCards[0]?.id ?? strengthCards[0]?.id ?? 1);
   const [historyPlayerFilter, setHistoryPlayerFilter] = useState("all");
   const [historyOrder, setHistoryOrder] = useState<"newest" | "oldest">("newest");
 
@@ -49,6 +56,23 @@ export const StrengthCardPanel = ({
       setSelectedCardId(availableCards[0]?.id ?? 1);
     }
   }, [availableCards, selectedCardId]);
+
+  const moveSourceCards =
+    moveSourceId === "pool"
+      ? strengthCards.filter((card) => !distributedIds.has(card.id))
+      : players.find((player) => player.id === moveSourceId)?.strengthCards ?? [];
+
+  useEffect(() => {
+    if (moveSourceId === moveTargetId) {
+      setMoveTargetId(moveSourceId === "pool" ? players[0]?.id ?? "" : "pool");
+    }
+  }, [moveSourceId, moveTargetId, players]);
+
+  useEffect(() => {
+    if (!moveSourceCards.some((card) => card.id === moveCardId)) {
+      setMoveCardId(moveSourceCards[0]?.id ?? 1);
+    }
+  }, [moveCardId, moveSourceCards]);
 
   const filteredHistory = strengthGiftHistory
     .filter((gift) => {
@@ -89,7 +113,7 @@ export const StrengthCardPanel = ({
             <select value={selectedCardId} onChange={(event) => setSelectedCardId(Number(event.target.value))}>
               {availableCards.map((card) => (
                 <option key={card.id} value={card.id}>
-                  [{card.category}] {card.text}
+                  {card.id}. [{card.category}] {card.text}
                 </option>
               ))}
             </select>
@@ -145,6 +169,55 @@ export const StrengthCardPanel = ({
             </article>
           ))}
         </div>
+      </div>
+
+      <div className="strength-give-box strength-move-box">
+        <div className="section-header">
+          <h3>強みカードを自由に移動</h3>
+          <p>未配布にも戻せます</p>
+        </div>
+        <div className="strength-history-filters strength-move-grid">
+          <label>
+            移動元
+            <select value={moveSourceId} onChange={(event) => setMoveSourceId(event.target.value)}>
+              <option value="pool">未配布</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            カード
+            <select value={moveCardId} onChange={(event) => setMoveCardId(Number(event.target.value))}>
+              {moveSourceCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.id}. [{card.category}] {card.text}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            移動先
+            <select value={moveTargetId} onChange={(event) => setMoveTargetId(event.target.value)}>
+              <option value="pool">未配布</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.id}>
+                  {player.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => onMoveStrengthCard(moveCardId, moveSourceId === "pool" ? null : moveSourceId, moveTargetId === "pool" ? null : moveTargetId)}
+            disabled={!moveSourceCards.length || moveSourceId === moveTargetId}
+          >
+            強みカードを移動
+          </button>
+        </div>
+        <small>一覧の {usedStrengthCardIds.length} 枚が現在どこかに配布中です。</small>
       </div>
 
       <div className="strength-history">

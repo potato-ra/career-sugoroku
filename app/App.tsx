@@ -25,12 +25,14 @@ export const App = () => {
     rollDice,
     endTurn,
     closeGame,
+    forceCloseRoom,
     setPlayerOrder,
     movePlayer,
     drawOrderLottery,
     drawEvent,
     giveStrengthCard,
     giveRandomStrengthCard,
+    moveStrengthCard,
     undoStrengthGift,
     runDeveloperAction,
   } = useGameSocket();
@@ -178,9 +180,21 @@ export const App = () => {
               ゲーム開始
             </button>
             {isFacilitator ? (
-              <button className="secondary" onClick={() => void closeGame()}>
-                ゲーム終了
-              </button>
+              <>
+                <button className="secondary" onClick={() => void closeGame()}>
+                  ゲーム終了
+                </button>
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    if (window.confirm("ルームを強制終了します。参加者はロビーへ戻ります。よろしいですか？")) {
+                      void forceCloseRoom();
+                    }
+                  }}
+                >
+                  ルーム強制終了
+                </button>
+              </>
             ) : null}
           </div>
         </div>
@@ -323,14 +337,16 @@ export const App = () => {
           facilitatorId={room.facilitatorId}
           facilitatorName={room.facilitatorName}
           strengthGiftHistory={room.strengthGiftHistory}
+          usedStrengthCardIds={room.usedStrengthCardIds}
           title="強みカード配布"
           onGiveStrengthCard={(targetPlayerId, strengthCardId) => void giveStrengthCard(targetPlayerId, strengthCardId)}
           onGiveRandomStrengthCard={(targetPlayerId) => void giveRandomStrengthCard(targetPlayerId)}
+          onMoveStrengthCard={(strengthCardId, fromPlayerId, toPlayerId) => void moveStrengthCard(strengthCardId, fromPlayerId, toPlayerId)}
           onUndoStrengthGift={(giftId) => void undoStrengthGift(giftId)}
         />
       ) : null}
 
-      <HelpPanel mode={helpMode} onClose={() => setHelpMode(null)} />
+      <HelpPanel mode={helpMode} usedStrengthCardIds={room.usedStrengthCardIds} onClose={() => setHelpMode(null)} />
 
       {errorMessage ? <p className="error-text bottom-error">{errorMessage}</p> : null}
     </main>

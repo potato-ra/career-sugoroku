@@ -36,36 +36,36 @@
   },
   {
     "id": "e06",
-    "title": "キャリア再発見",
-    "description": "自分の職業カードの中から「今いちばん気になる1枚」を選び直し、その理由を話す",
+    "title": "キャリア再発見①",
+    "description": "自分の職業カードの中から「今いちばん気になる1枚」を選び、その理由を話す",
     "eventType": "career",
     "effectType": "career_choice"
   },
   {
     "id": "e07",
-    "title": "思い切って交換",
-    "description": "自分の職業カード1枚を手放し、新しく1枚引く。残すか交換するかは自分で決める",
+    "title": "キャリア再発見②",
+    "description": "自分の職業カードの中から「自分には合わない」と思うものを1枚選び、その理由を話す",
     "eventType": "career",
-    "effectType": "card_swap"
+    "effectType": "career_choice"
   },
   {
     "id": "e08",
     "title": "他己キャリア提案",
-    "description": "他のプレイヤー1人が、あなたに合いそうな職業カードを1枚選ぶ。受け取るかどうかは自分で決める",
+    "description": "他プレイヤーが相談して、あなたに合いそうな職業をあなたが持っている職業カードの中から1つ提案します",
     "eventType": "career",
     "effectType": "career_feedback"
   },
   {
     "id": "e09",
     "title": "キャリア分岐",
-    "description": "「安定」「挑戦」「専門性」の3択から1つ選び、その方向に合う職業カードを1枚追加で選ぶ",
+    "description": "これからのキャリアは、「安定」「挑戦」「専門性」のどの方向性を選択しますか？",
     "eventType": "career",
     "effectType": "career_choice"
   },
   {
     "id": "e10",
     "title": "偶然の出会い",
-    "description": "職業カードをランダムで1枚引く。その職業のどこに可能性を感じるかを一言で話す",
+    "description": "職業カードのランダム配布機能を実行します。",
     "eventType": "career",
     "effectType": "draw_card"
   },
@@ -114,31 +114,30 @@
   },
   {
     "id": "e17",
-    "title": "カードシャッフル",
-    "description": "自分の職業カードを1枚選び、山札の上1枚と交換するかどうかを決める",
-    "eventType": "game",
-    "effectType": "card_swap"
+    "title": "強みの再確認",
+    "description": "今の自分にしっくりくる強みカードを1枚選び、その理由を話す",
+    "eventType": "strength",
+    "effectType": "strength_update"
   },
   {
     "id": "e18",
-    "title": "応援ブースト",
-    "description": "他プレイヤー2人以上から応援コメントをもらえたら1マス進む",
-    "eventType": "game",
-    "effectType": "advance",
-    "advanceBy": 1
+    "title": "応援メッセージ",
+    "description": "右隣のプレイヤーから、これからのあなたに向けた応援メッセージを1つもらう",
+    "eventType": "dialogue",
+    "effectType": "reflection"
   },
   {
     "id": "e19",
-    "title": "ランダムトレード",
-    "description": "サイコロを振り、出た目が偶数なら職業カード1枚をランダム交換、奇数なら強みカード1枚を自分で選んで誰かに渡す",
+    "title": "ランダムチャンス",
+    "description": "偶数なら職業カード1枚追加、奇数なら強みカード1枚追加",
     "eventType": "game",
-    "effectType": "random_trade"
+    "effectType": "random_chance"
   },
   {
     "id": "e20",
-    "title": "選べるボーナス",
-    "description": "「1マス進む」「強みカードを1枚引く」「職業カードを1枚交換する」から1つ選ぶ",
-    "eventType": "game",
-    "effectType": "choice_bonus"
+    "title": "次の一歩",
+    "description": "これから試してみたい行動を1つ宣言する",
+    "eventType": "dialogue",
+    "effectType": "future_talk"
   }
 ]

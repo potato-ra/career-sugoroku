@@ -2,6 +2,7 @@ import strengthCards from "../data/strength_cards.json";
 
 interface HelpPanelProps {
   mode: "rules" | "strengths" | null;
+  usedStrengthCardIds?: number[];
   onClose: () => void;
 }
 
@@ -11,7 +12,7 @@ const groupedStrengthCards = strengthCards.reduce<Record<string, typeof strength
   return groups;
 }, {});
 
-export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
+export const HelpPanel = ({ mode, usedStrengthCardIds = [], onClose }: HelpPanelProps) => {
   if (!mode) {
     return null;
   }
@@ -144,10 +145,14 @@ export const HelpPanel = ({ mode, onClose }: HelpPanelProps) => {
                 </div>
                 <div className="strength-reference-grid">
                   {cards.map((card) => (
-                    <div key={card.id} className="strength-reference-item">
+                    <div
+                      key={card.id}
+                      className={`strength-reference-item ${usedStrengthCardIds.includes(card.id) ? "is-distributed" : "is-available"}`}
+                    >
                       <strong>
                         {card.id}. {card.text}
                       </strong>
+                      <span className="strength-reference-status">{usedStrengthCardIds.includes(card.id) ? "配布済み" : "未配布"}</span>
                     </div>
                   ))}
                 </div>

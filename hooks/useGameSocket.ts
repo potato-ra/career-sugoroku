@@ -63,6 +63,14 @@ export const useGameSocket = () => {
       setRoom(nextRoom);
     });
 
+    socket.on("room:forceClosed", () => {
+      clearSession();
+      setRoom(null);
+      setPlayerId("");
+      setLastDice(null);
+      setErrorMessage("ルームが強制終了されました。");
+    });
+
     socket.on("game:rolled", ({ dice }: { dice: number }) => {
       setLastDice(dice);
     });
@@ -194,6 +202,17 @@ export const useGameSocket = () => {
     }
   };
 
+  const forceCloseRoom = async () => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("room:forceClose", { roomId: room.roomId, playerId });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "ルーム強制終了に失敗しました。");
+    }
+  };
+
   const setPlayerOrder = async (orderedPlayerIds: string[]) => {
     if (!room || !playerId) {
       return;
@@ -304,6 +323,23 @@ export const useGameSocket = () => {
     }
   };
 
+  const moveStrengthCard = async (strengthCardId: number, fromPlayerId?: string | null, toPlayerId?: string | null) => {
+    if (!room || !playerId) {
+      return;
+    }
+
+    const response = await emitWithAck<ActionResult>("strength:move", {
+      roomId: room.roomId,
+      playerId,
+      strengthCardId,
+      fromPlayerId,
+      toPlayerId,
+    });
+    if (!response.ok) {
+      setErrorMessage(response.message ?? "強みカードの移動に失敗しました。");
+    }
+  };
+
   const runDeveloperAction = async (action: string, payload: Record<string, unknown> = {}) => {
     if (!room || !playerId) {
       return;
@@ -326,6 +362,7 @@ export const useGameSocket = () => {
     rollDice,
     endTurn,
     closeGame,
+    forceCloseRoom,
     setPlayerOrder,
     rollTurnOrderDice,
     movePlayer,
@@ -334,6 +371,7 @@ export const useGameSocket = () => {
     giveStrengthCard,
     giveRandomStrengthCard,
     undoStrengthGift,
+    moveStrengthCard,
     runDeveloperAction,
   };
 };

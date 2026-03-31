@@ -66,6 +66,52 @@ const drawNextCareerCard = (careerCards: CareerCard[], ownedIds: number[]): Care
   return careerCards.find((card) => !ownedIds.includes(card.id)) ?? null;
 };
 
+const addCareerCardToPlayer = (players: Player[], playerId: string, careerCards: CareerCard[]) => {
+  const targetPlayer = players.find((player) => player.id === playerId);
+  if (!targetPlayer || targetPlayer.careerCards.length >= 5) {
+    return { players, card: null as CareerCard | null };
+  }
+
+  const ownedIds = players.flatMap((player) => player.careerCards.map((card) => card.id));
+  const nextCard = drawNextCareerCard(careerCards, ownedIds);
+  if (!nextCard) {
+    return { players, card: null as CareerCard | null };
+  }
+
+  return {
+    players: players.map((player) =>
+      player.id === playerId ? { ...player, careerCards: [...player.careerCards, nextCard] } : player,
+    ),
+    card: nextCard,
+  };
+};
+
+const addRandomStrengthCardToPlayer = (
+  players: Player[],
+  playerId: string,
+  strengthCards: StrengthCard[],
+  usedStrengthCardIds: number[],
+) => {
+  const availableCards = strengthCards.filter((card) => !usedStrengthCardIds.includes(card.id));
+  if (availableCards.length === 0) {
+    return { players, card: null as StrengthCard | null, usedStrengthCardIds };
+  }
+
+  const randomIndex = Math.floor(Math.random() * availableCards.length);
+  const nextCard = availableCards[randomIndex] ?? null;
+  if (!nextCard) {
+    return { players, card: null as StrengthCard | null, usedStrengthCardIds };
+  }
+
+  return {
+    players: players.map((player) =>
+      player.id === playerId ? { ...player, strengthCards: [...player.strengthCards, nextCard] } : player,
+    ),
+    card: nextCard,
+    usedStrengthCardIds: [...usedStrengthCardIds, nextCard.id],
+  };
+};
+
 const shuffle = <T>(items: T[]): T[] => {
   const nextItems = [...items];
   for (let index = nextItems.length - 1; index > 0; index -= 1) {
@@ -421,17 +467,15 @@ export const drawEventForCurrentPlayer = (room: RoomState, data: DataBundle): Ro
 
   const eventCard = drawUnusedEvent(data.eventCards, room.usedEventIds);
   let playersAfterEffect = room.players;
+  let usedStrengthCardIds = room.usedStrengthCardIds;
+  let description = eventCard.description;
 
   if (eventCard.effectType === "draw_card") {
-    const ownedIds = room.players.flatMap((player) => player.careerCards.map((card) => card.id));
-    const nextCard = drawNextCareerCard(data.careerCards, ownedIds);
-    if (nextCard) {
-      playersAfterEffect = room.players.map((player) =>
-        player.id === currentPlayer.id && player.careerCards.length < 5
-          ? { ...player, careerCards: [...player.careerCards, nextCard] }
-          : player,
-      );
-    }
+    const result = addCareerCardToPlayer(room.players, currentPlayer.id, data.careerCards);
+    playersAfterEffect = result.players;
+    description = result.card
+      ? `${eventCard.description}\n追加された職業カード: 「${result.card.title}」`
+      : `${eventCard.description}\n職業カードは追加できませんでした。`;
   }
 
   if (eventCard.effectType === "advance" && eventCard.advanceBy) {
@@ -442,10 +486,38 @@ export const drawEventForCurrentPlayer = (room: RoomState, data: DataBundle): Ro
     );
   }
 
+  if (eventCard.effectType === "strength_random") {
+    const result = addRandomStrengthCardToPlayer(room.players, currentPlayer.id, data.strengthCards, room.usedStrengthCardIds);
+    playersAfterEffect = result.players;
+    usedStrengthCardIds = result.usedStrengthCardIds;
+    description = result.card
+      ? `${eventCard.description}\n追加された強みカード: 「${result.card.text}」`
+      : `${eventCard.description}\n追加できる強みカードがありませんでした。`;
+  }
+
+  if (eventCard.effectType === "random_chance") {
+    const dice = Math.floor(Math.random() * 6) + 1;
+    if (dice % 2 === 0) {
+      const result = addCareerCardToPlayer(room.players, currentPlayer.id, data.careerCards);
+      playersAfterEffect = result.players;
+      description = result.card
+        ? `${eventCard.description}\n${dice} が出たので職業カード「${result.card.title}」を追加しました。`
+        : `${eventCard.description}\n${dice} が出ましたが、職業カードは追加できませんでした。`;
+    } else {
+      const result = addRandomStrengthCardToPlayer(room.players, currentPlayer.id, data.strengthCards, room.usedStrengthCardIds);
+      playersAfterEffect = result.players;
+      usedStrengthCardIds = result.usedStrengthCardIds;
+      description = result.card
+        ? `${eventCard.description}\n${dice} が出たので強みカード「${result.card.text}」を追加しました。`
+        : `${eventCard.description}\n${dice} が出ましたが、強みカードは追加できませんでした。`;
+    }
+  }
+
   return {
     ...room,
     players: playersAfterEffect,
-    activeResolution: buildPromptResolution("event", eventCard.title, eventCard.description, room.activeResolution.spaceId, eventCard.id),
+    usedStrengthCardIds,
+    activeResolution: buildPromptResolution("event", eventCard.title, description, room.activeResolution.spaceId, eventCard.id),
     usedEventIds: [...room.usedEventIds, eventCard.id],
     logs: [createLog(`${currentPlayer.name} がイベントカード「${eventCard.title}」を引きました`), ...room.logs],
   };
@@ -673,6 +745,58 @@ export const giveRandomStrengthCard = (
   }
 
   return giveStrengthCard(room, strengthCards, selectedCard.id, fromPlayerId, toPlayerId);
+};
+
+export const moveStrengthCard = (
+  room: RoomState,
+  strengthCards: StrengthCard[],
+  strengthCardId: number,
+  actorPlayerId: string,
+  fromPlayerId: string | null,
+  toPlayerId: string | null,
+): RoomState => {
+  const actorName =
+    room.players.find((player) => player.id === actorPlayerId)?.name ??
+    (room.facilitatorId === actorPlayerId ? room.facilitatorName : null);
+  const strengthCard = strengthCards.find((card) => card.id === strengthCardId);
+  const fromPlayer = fromPlayerId ? room.players.find((player) => player.id === fromPlayerId) : null;
+  const toPlayer = toPlayerId ? room.players.find((player) => player.id === toPlayerId) : null;
+  const isInPool = !room.usedStrengthCardIds.includes(strengthCardId);
+  const fromHasCard = fromPlayerId ? fromPlayer?.strengthCards.some((card) => card.id === strengthCardId) : isInPool;
+
+  if (!actorName || !strengthCard || !fromHasCard || (fromPlayerId && !fromPlayer) || (toPlayerId && !toPlayer)) {
+    return room;
+  }
+
+  if (fromPlayerId === toPlayerId) {
+    return room;
+  }
+
+  const removedPlayers = room.players.map((player) =>
+    player.id === fromPlayerId
+      ? { ...player, strengthCards: player.strengthCards.filter((card) => card.id !== strengthCardId) }
+      : player,
+  );
+
+  const nextPlayers = removedPlayers.map((player) =>
+    player.id === toPlayerId ? { ...player, strengthCards: [...player.strengthCards, strengthCard] } : player,
+  );
+
+  const nextUsedStrengthCardIds = toPlayerId
+    ? Array.from(new Set([...room.usedStrengthCardIds, strengthCardId]))
+    : room.usedStrengthCardIds.filter((id) => id !== strengthCardId);
+
+  const nextHistory = room.strengthGiftHistory.filter((entry) => entry.strengthCard.id !== strengthCardId);
+  const fromLabel = fromPlayer?.name ?? "未配布";
+  const toLabel = toPlayer?.name ?? "未配布";
+
+  return {
+    ...room,
+    players: nextPlayers,
+    usedStrengthCardIds: nextUsedStrengthCardIds,
+    strengthGiftHistory: nextHistory,
+    logs: [createLog(`${actorName} が「${strengthCard.text}」を ${fromLabel} から ${toLabel} へ移動しました`), ...room.logs],
+  };
 };
 
 export const undoStrengthGift = (room: RoomState, giftId: string, actorPlayerId: string): RoomState => {

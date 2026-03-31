@@ -7,6 +7,7 @@ import {
   drawTurnOrderLottery,
   drawEventForCurrentPlayer,
   giveRandomStrengthCard,
+  moveStrengthCard,
   rollTurnOrderDice,
   resolveTurn,
   setPlayOrder,
@@ -128,6 +129,24 @@ describe("gameEngine", () => {
     expect(afterTarget?.strengthCards.length).toBe(4);
     expect(updated.usedStrengthCardIds.length).toBe(started.usedStrengthCardIds.length + 1);
     expect(updated.strengthGiftHistory.length).toBe(1);
+  });
+
+  it("lets the facilitator move an initial strength card back to the pool", () => {
+    const room = createRoomState("room-strength-move", gameData.board, boardVersion);
+    const facilitatorId = assignFacilitator(room, "Facilitator", "socket-f");
+    const playerA = addPlayerToRoom(room, "A", "socket-a");
+    addPlayerToRoom(room, "B", "socket-b");
+    addPlayerToRoom(room, "C", "socket-c");
+    const started = startGame(room, gameData);
+
+    const targetPlayer = started.players.find((player) => player.id === playerA.id)!;
+    const initialCard = targetPlayer.strengthCards[0]!;
+
+    const updated = moveStrengthCard(started, gameData.strengthCards, initialCard.id, facilitatorId, targetPlayer.id, null);
+    const afterPlayer = updated.players.find((player) => player.id === targetPlayer.id)!;
+
+    expect(afterPlayer.strengthCards.some((card) => card.id === initialCard.id)).toBe(false);
+    expect(updated.usedStrengthCardIds.includes(initialCard.id)).toBe(false);
   });
 
   it("can reorder players manually without losing the current turn player", () => {

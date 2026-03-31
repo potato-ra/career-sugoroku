@@ -16,6 +16,7 @@ import {
   endGame,
   giveRandomStrengthCard,
   giveStrengthCard,
+  moveStrengthCard,
   movePlayerToPosition,
   resolveTurn,
   rollTurnOrderDice,
@@ -448,6 +449,33 @@ io.on("connection", (socket) => {
     callback?.({ ok: true });
   });
 
+  socket.on("room:forceClose", ({ roomId, playerId }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "ルーム強制終了はファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    clearBotTimers(roomId);
+    io.to(roomId).emit("room:forceClosed", { roomId });
+    io.in(roomId).socketsLeave(roomId);
+    rooms.delete(roomId);
+
+    for (const [socketId, mapping] of socketRoomMap.entries()) {
+      if (mapping.roomId === roomId) {
+        socketRoomMap.delete(socketId);
+        clearReconnectTimer(mapping.actorId);
+      }
+    }
+
+    callback?.({ ok: true });
+  });
+
   socket.on("game:setOrder", ({ roomId, playerId, orderedPlayerIds }, callback) => {
     const room = rooms.get(roomId);
     if (!room) {
@@ -600,6 +628,36 @@ io.on("connection", (socket) => {
     const nextRoom = giveRandomStrengthCard(room, gameData.strengthCards, playerId, String(targetPlayerId));
     if (nextRoom === room) {
       callback?.({ ok: false, message: "ランダムで配れる強みカードがありませんでした。" });
+      return;
+    }
+
+    emitRoomState(roomId, nextRoom);
+    callback?.({ ok: true });
+  });
+
+  socket.on("strength:move", ({ roomId, playerId, strengthCardId, fromPlayerId, toPlayerId }, callback) => {
+    const room = rooms.get(roomId);
+    if (!room) {
+      callback?.({ ok: false, message: "ルームが見つかりません。" });
+      return;
+    }
+
+    if (room.facilitatorId !== playerId) {
+      callback?.({ ok: false, message: "強みカードの移動はファシリテーターのみ操作できます。" });
+      return;
+    }
+
+    const nextRoom = moveStrengthCard(
+      room,
+      gameData.strengthCards,
+      Number(strengthCardId),
+      String(playerId),
+      fromPlayerId ? String(fromPlayerId) : null,
+      toPlayerId ? String(toPlayerId) : null,
+    );
+
+    if (nextRoom === room) {
+      callback?.({ ok: false, message: "強みカードを移動できませんでした。" });
       return;
     }
 
