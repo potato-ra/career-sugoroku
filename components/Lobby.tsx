@@ -83,6 +83,7 @@ export const Lobby = ({
 
           <form
             className="facilitator-auth-form"
+            autoComplete="off"
             onSubmit={async (event) => {
               event.preventDefault();
               const ok = await onLogin(loginId, password);
@@ -133,7 +134,12 @@ export const Lobby = ({
               <>
                 <label>
                   ログインID
-                  <input value={loginId} onChange={(event) => setLoginId(event.target.value)} placeholder="owner" />
+                  <input
+                    name="facilitator_login_id"
+                    autoComplete="off"
+                    value={loginId}
+                    onChange={(event) => setLoginId(event.target.value)}
+                  />
                 </label>
                 <label>
                   パスワード
@@ -226,6 +232,7 @@ export const Lobby = ({
 
         <form
           className="panel"
+          autoComplete="off"
           onSubmit={(event) => {
             event.preventDefault();
             void onJoinRoom({ roomId: joinRoomId, name: joinName, avatarUrl: joinAvatarUrl || undefined, isFacilitator: false });
@@ -238,7 +245,12 @@ export const Lobby = ({
           </label>
           <label>
             名前
-            <input value={joinName} onChange={(event) => setJoinName(event.target.value)} placeholder="プレイヤー名" />
+            <input
+              name="player_join_name"
+              autoComplete="off"
+              value={joinName}
+              onChange={(event) => setJoinName(event.target.value)}
+            />
           </label>
           <label>
             プレイヤー画像
@@ -326,6 +338,7 @@ export const Lobby = ({
                   <span>{account.loginId}</span>
                   <span>{account.role === "admin" ? "管理者" : "ファシリ"}</span>
                   <span>{account.mustChangePassword ? "初回変更待ち" : "利用中"}</span>
+                  <span>{account.lastLoginAt ? `最終ログイン: ${new Date(account.lastLoginAt).toLocaleString("ja-JP")}` : "最終ログイン: なし"}</span>
                 </div>
               ))}
             </div>
