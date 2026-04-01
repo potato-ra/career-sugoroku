@@ -31,10 +31,10 @@ export const Lobby = ({
   onResetFacilitatorPassword,
   errorMessage,
 }: LobbyProps) => {
-  const [createRoomId, setCreateRoomId] = useState("CAREER01");
+  const [createRoomId, setCreateRoomId] = useState("");
   const [createAvatarUrl, setCreateAvatarUrl] = useState("");
   const [joinName, setJoinName] = useState("");
-  const [joinRoomId, setJoinRoomId] = useState("CAREER01");
+  const [joinRoomId, setJoinRoomId] = useState("");
   const [joinAvatarUrl, setJoinAvatarUrl] = useState("");
   const [createMode, setCreateMode] = useState<"normal" | "demo">("normal");
   const [botCount, setBotCount] = useState(2);
