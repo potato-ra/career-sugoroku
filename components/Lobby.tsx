@@ -1,6 +1,17 @@
 import { useState } from "react";
-import type { FacilitatorAccountSummary, FacilitatorAuthUser } from "../hooks/useFacilitatorAuth";
+import type { FacilitatorAuthUser } from "../hooks/useFacilitatorAuth";
 import type { JoinPayload } from "../hooks/useGameSocket";
+
+interface LobbyFacilitatorAccountSummary {
+  loginId: string;
+  displayName: string;
+  role: "admin" | "facilitator";
+  isActive: boolean;
+  mustChangePassword: boolean;
+  lastLoginAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface LobbyProps {
   onCreateRoom: (payload: JoinPayload) => Promise<unknown>;
@@ -8,7 +19,7 @@ interface LobbyProps {
   authUser: FacilitatorAuthUser | null;
   authLoading: boolean;
   authError?: string;
-  facilitatorAccounts: FacilitatorAccountSummary[];
+  facilitatorAccounts: LobbyFacilitatorAccountSummary[];
   onLogin: (loginId: string, password: string) => Promise<boolean>;
   onLogout: () => Promise<void> | void;
   onChangePassword: (currentPassword: string, nextPassword: string) => Promise<void>;
