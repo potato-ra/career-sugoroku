@@ -684,9 +684,17 @@ io.on("connection", (socket) => {
       const nextRoom = {
         ...existingRoom,
         roomSlot: normalizedSlot,
+        started: false,
+        endedAt: null,
+        endedByName: null,
+        activeResolution: null,
+        winnerId: null,
+        currentTurnIndex: 0,
+        turnOrderRolls: [],
+        players: existingRoom.players.map((player) => ({ ...player, position: 0 })),
         facilitatorLoginId: session.loginId,
         facilitatorSocketId: socket.id,
-        logs: [createLog("ファシリテーターが固定ルームへ入りました。"), ...existingRoom.logs],
+        logs: [createLog("ファシリテーターが固定ルームへ戻りました。"), ...existingRoom.logs],
       };
       rooms.set(roomId, nextRoom);
       socketRoomMap.set(socket.id, { roomId, actorId: nextRoom.facilitatorId ?? "", role: "facilitator" });
