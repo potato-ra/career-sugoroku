@@ -7,6 +7,10 @@ export interface FacilitatorAccountRecord {
   displayName: string;
   role: "admin" | "facilitator";
   passwordHash: string;
+  accessKeys: {
+    primary: string;
+    backup: string;
+  };
   isActive: boolean;
   mustChangePassword: boolean;
   lastLoginAt?: string;
@@ -18,6 +22,10 @@ export interface FacilitatorAccountSummary {
   loginId: string;
   displayName: string;
   role: "admin" | "facilitator";
+  accessKeys: {
+    primary: string;
+    backup: string;
+  };
   isActive: boolean;
   mustChangePassword: boolean;
   lastLoginAt?: string;
@@ -51,6 +59,15 @@ const ensureFacilitatorAccountsFile = () => {
 };
 
 const normalizeLoginId = (value: string) => value.trim().toLowerCase();
+const createAccessKey = () => randomBytes(12).toString("hex");
+
+const ensureAccountAccessKeys = (account: FacilitatorAccountRecord): FacilitatorAccountRecord => ({
+  ...account,
+  accessKeys: {
+    primary: account.accessKeys?.primary || createAccessKey(),
+    backup: account.accessKeys?.backup || createAccessKey(),
+  },
+});
 
 export const hashPassword = (password: string) => {
   const salt = randomBytes(16).toString("hex");
@@ -77,7 +94,12 @@ export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
   ensureFacilitatorAccountsFile();
 
   const raw = readFileSync(ACCOUNTS_PATH, "utf-8");
-  return JSON.parse(raw) as FacilitatorAccountRecord[];
+  const parsed = JSON.parse(raw) as FacilitatorAccountRecord[];
+  const upgraded = parsed.map(ensureAccountAccessKeys);
+  if (JSON.stringify(parsed) !== JSON.stringify(upgraded)) {
+    saveFacilitatorAccounts(upgraded);
+  }
+  return upgraded;
 };
 
 export const saveFacilitatorAccounts = (accounts: FacilitatorAccountRecord[]) => {
@@ -89,6 +111,7 @@ export const sanitizeFacilitatorAccount = (account: FacilitatorAccountRecord): F
   loginId: account.loginId,
   displayName: account.displayName,
   role: account.role,
+  accessKeys: account.accessKeys,
   isActive: account.isActive,
   mustChangePassword: account.mustChangePassword,
   lastLoginAt: account.lastLoginAt,
@@ -111,6 +134,10 @@ export const createFacilitatorAccountRecord = (
     displayName: displayName.trim(),
     role,
     passwordHash: hashPassword(temporaryPassword),
+    accessKeys: {
+      primary: createAccessKey(),
+      backup: createAccessKey(),
+    },
     isActive: true,
     mustChangePassword: true,
     createdAt: now,
@@ -140,3 +167,20 @@ export const markFacilitatorLastLogin = (account: FacilitatorAccountRecord): Fac
 
 export const normalizeFacilitatorLoginId = normalizeLoginId;
 export const facilitatorAccountsPath = ACCOUNTS_PATH;
+export const findFacilitatorAccountByAccessKey = (accounts: FacilitatorAccountRecord[], accessKey: string) =>
+  accounts.find(
+    (account) =>
+      account.accessKeys?.primary === accessKey.trim() || account.accessKeys?.backup === accessKey.trim(),
+  );
+
+export const regenerateFacilitatorAccessKey = (
+  account: FacilitatorAccountRecord,
+  slot: "primary" | "backup",
+): FacilitatorAccountRecord => ({
+  ...account,
+  accessKeys: {
+    ...account.accessKeys,
+    [slot]: createAccessKey(),
+  },
+  updatedAt: new Date().toISOString(),
+});

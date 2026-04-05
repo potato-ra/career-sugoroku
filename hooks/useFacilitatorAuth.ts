@@ -13,8 +13,13 @@ export interface FacilitatorAccountSummary {
   loginId: string;
   displayName: string;
   role: "admin" | "facilitator";
+  accessKeys: {
+    primary: string;
+    backup: string;
+  };
   isActive: boolean;
   mustChangePassword: boolean;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,6 +38,7 @@ const getApiBase = () => {
 
 export const useFacilitatorAuth = () => {
   const [authToken, setAuthToken] = useState<string | null>(null);
+  const [authAccessKey, setAuthAccessKey] = useState<string | null>(null);
   const [authUser, setAuthUser] = useState<FacilitatorAuthUser | null>(null);
   const [accounts, setAccounts] = useState<FacilitatorAccountSummary[]>([]);
   const [authLoading, setAuthLoading] = useState(true);
@@ -81,6 +87,7 @@ export const useFacilitatorAuth = () => {
     } catch {
       window.localStorage.removeItem(AUTH_STORAGE_KEY);
       setAuthToken(null);
+      setAuthAccessKey(null);
       setAuthUser(null);
       setAccounts([]);
     } finally {
@@ -111,6 +118,30 @@ export const useFacilitatorAuth = () => {
 
       window.localStorage.setItem(AUTH_STORAGE_KEY, payload.token);
       setAuthToken(payload.token);
+      setAuthAccessKey(null);
+      setAuthUser(payload.user);
+      setAccounts(payload.accounts ?? []);
+      setAuthError("");
+      return true;
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "ログインに失敗しました。");
+      return false;
+    }
+  };
+
+  const loginWithAccessKey = async (accessKey: string, password: string) => {
+    try {
+      const payload = await authorizedFetch<{ token: string; user: FacilitatorAuthUser; accounts?: FacilitatorAccountSummary[] }>(
+        "/api/auth/key-login",
+        {
+          method: "POST",
+          body: JSON.stringify({ accessKey, password }),
+        },
+      );
+
+      window.localStorage.setItem(AUTH_STORAGE_KEY, payload.token);
+      setAuthToken(payload.token);
+      setAuthAccessKey(accessKey);
       setAuthUser(payload.user);
       setAccounts(payload.accounts ?? []);
       setAuthError("");
@@ -130,6 +161,7 @@ export const useFacilitatorAuth = () => {
 
     window.localStorage.removeItem(AUTH_STORAGE_KEY);
     setAuthToken(null);
+    setAuthAccessKey(null);
     setAuthUser(null);
     setAccounts([]);
   };
@@ -163,17 +195,38 @@ export const useFacilitatorAuth = () => {
     await refreshAccounts();
   };
 
+  const regenerateAccessLink = async (loginId: string, slot: "primary" | "backup") => {
+    await authorizedFetch(`/api/facilitators/${encodeURIComponent(loginId)}/regenerate-link`, {
+      method: "POST",
+      body: JSON.stringify({ slot }),
+    });
+    await refreshAccounts();
+  };
+
+  const resolveFacilitatorByAccessKey = async (accessKey: string) => {
+    const response = await fetch(`${getApiBase()}/api/facilitator-links/${encodeURIComponent(accessKey)}`);
+    if (!response.ok) {
+      return null;
+    }
+    const payload = (await response.json()) as { facilitator: { loginId: string; displayName: string } };
+    return payload.facilitator;
+  };
+
   return {
     authToken,
+    authAccessKey,
     authUser,
     accounts,
     authLoading,
     authError,
     login,
+    loginWithAccessKey,
     logout,
     changePassword,
     createAccount,
     resetPassword,
+    regenerateAccessLink,
+    resolveFacilitatorByAccessKey,
     refreshAccounts,
   };
 };

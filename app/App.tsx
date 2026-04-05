@@ -16,6 +16,13 @@ import { useGameSocket } from "../hooks/useGameSocket";
 export const App = () => {
   const printGuideUrl = "/guide-print.html";
   const facilitatorAuth = useFacilitatorAuth();
+  const pathname = window.location.pathname;
+  const pathSegments = pathname.split("/").filter(Boolean);
+  const pageVariant: "admin" | "facilitator" | "player" =
+    pathSegments[0] === "admin" ? "admin" : pathSegments[0] === "player" ? "player" : "facilitator";
+  const pageAccessKey = (pathSegments[1] || "").trim();
+  const query = new URLSearchParams(window.location.search);
+  const sharedRoomId = (query.get("room") || "").toUpperCase();
   const {
     room,
     playerId,
@@ -82,8 +89,33 @@ export const App = () => {
   }, [isFacilitator, room]);
 
   if (!room || !playerId) {
+    if (!pathSegments[0]) {
+      return (
+        <main className="app-shell">
+          <section className="panel">
+            <h1>キャリアすごろく ポータル</h1>
+            <p>利用する立場に応じて入口を選んでください。</p>
+            <div className="inline-actions">
+              <button type="button" onClick={() => window.location.assign("/admin")}>
+                管理人ページ
+              </button>
+              <button type="button" onClick={() => window.location.assign("/facilitator")}>
+                ファシリページ
+              </button>
+              <button type="button" onClick={() => window.location.assign("/player")}>
+                プレイヤーページ
+              </button>
+            </div>
+          </section>
+        </main>
+      );
+    }
+
     return (
       <Lobby
+        variant={pageVariant}
+        accessKey={pageVariant === "facilitator" ? pageAccessKey : undefined}
+        initialRoomId={pageVariant === "player" ? sharedRoomId : undefined}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}
         authUser={facilitatorAuth.authUser}
@@ -91,10 +123,13 @@ export const App = () => {
         authError={facilitatorAuth.authError}
         facilitatorAccounts={facilitatorAuth.accounts}
         onLogin={facilitatorAuth.login}
+        onLoginWithAccessKey={facilitatorAuth.loginWithAccessKey}
         onLogout={facilitatorAuth.logout}
         onChangePassword={facilitatorAuth.changePassword}
         onCreateFacilitatorAccount={facilitatorAuth.createAccount}
         onResetFacilitatorPassword={facilitatorAuth.resetPassword}
+        onRegenerateAccessLink={facilitatorAuth.regenerateAccessLink}
+        inviterName={undefined}
         errorMessage={errorMessage}
       />
     );
@@ -192,6 +227,12 @@ export const App = () => {
             </button>
           </div>
           <div className="facilitator-badge">{isFacilitator ? "ファシリ操作権あり" : "プレイヤーはサイコロのみ操作"}</div>
+          {isFacilitator && facilitatorAuth.authAccessKey ? (
+            <div className="panel" style={{ maxWidth: 520 }}>
+              <p className="mode-caption">プレイヤー招待URL</p>
+              <p>{`${window.location.origin}/player/${facilitatorAuth.authAccessKey}?room=${room.roomId}`}</p>
+            </div>
+          ) : null}
           <div className="inline-actions action-button-row">
             <button onClick={() => void startGame()} disabled={!canStart || !isFacilitator}>
               ゲーム開始

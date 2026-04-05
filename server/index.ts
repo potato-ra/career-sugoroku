@@ -8,9 +8,11 @@ import { BOT_NAMES, runBotEndTurn, runBotRoll } from "../lib/botEngine";
 import {
   createFacilitatorAccountRecord,
   facilitatorAccountsPath,
+  findFacilitatorAccountByAccessKey,
   findFacilitatorAccount,
   loadFacilitatorAccounts,
   markFacilitatorLastLogin,
+  regenerateFacilitatorAccessKey,
   sanitizeFacilitatorAccount,
   saveFacilitatorAccounts,
   updateFacilitatorPassword,
@@ -150,6 +152,38 @@ app.post("/api/auth/login", (request, response) => {
   response.json({ ok: true, token, ...createSessionPayload(token) });
 });
 
+app.post("/api/auth/key-login", (request, response) => {
+  const accessKey = String(request.body?.accessKey ?? "").trim();
+  const password = String(request.body?.password ?? "");
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccountByAccessKey(accounts, accessKey);
+
+  if (!account || !account.isActive || !verifyPassword(password, account.passwordHash)) {
+    response.status(401).json({ ok: false, message: "URLキーまたはパスワードが正しくありません。" });
+    return;
+  }
+
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId ? markFacilitatorLastLogin(entry) : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+  const signedInAccount = findFacilitatorAccount(updatedAccounts, account.loginId);
+  if (!signedInAccount) {
+    response.status(500).json({ ok: false, message: "ログイン情報の更新に失敗しました。" });
+    return;
+  }
+
+  const token = randomBytes(24).toString("hex");
+  facilitatorSessions.set(token, {
+    loginId: signedInAccount.loginId,
+    displayName: signedInAccount.displayName,
+    role: signedInAccount.role,
+    mustChangePassword: signedInAccount.mustChangePassword,
+  });
+
+  response.json({ ok: true, token, ...createSessionPayload(token) });
+});
+
 app.get("/api/auth/me", (request, response) => {
   const token = getBearerToken(request);
   const payload = token ? createSessionPayload(token) : null;
@@ -268,6 +302,57 @@ app.post("/api/facilitators/:loginId/reset-password", (request, response) => {
   );
   saveFacilitatorAccounts(updatedAccounts);
   response.json({ ok: true });
+});
+
+app.post("/api/facilitators/:loginId/regenerate-link", (request, response) => {
+  const session = requireAdminSession(getBearerToken(request));
+  if (!session) {
+    response.status(403).json({ ok: false, message: "管理者のみURLを再発行できます。" });
+    return;
+  }
+
+  const loginId = String(request.params.loginId ?? "").trim().toLowerCase();
+  const slot = request.body?.slot === "backup" ? "backup" : request.body?.slot === "primary" ? "primary" : null;
+  if (!loginId || !slot) {
+    response.status(400).json({ ok: false, message: "対象アカウントとURL種別を指定してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, loginId);
+  if (!account) {
+    response.status(404).json({ ok: false, message: "対象アカウントが見つかりません。" });
+    return;
+  }
+
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId ? regenerateFacilitatorAccessKey(entry, slot) : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+  response.json({ ok: true });
+});
+
+app.get("/api/facilitator-links/:accessKey", (request, response) => {
+  const accessKey = String(request.params.accessKey ?? "").trim();
+  if (!accessKey) {
+    response.status(400).json({ ok: false, message: "URLキーを指定してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccountByAccessKey(accounts, accessKey);
+  if (!account || !account.isActive) {
+    response.status(404).json({ ok: false, message: "URLキーが見つかりません。" });
+    return;
+  }
+
+  response.json({
+    ok: true,
+    facilitator: {
+      loginId: account.loginId,
+      displayName: account.displayName,
+    },
+  });
 });
 
 app.get("/health", (_req, res) => {
