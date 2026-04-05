@@ -135,7 +135,15 @@ app.post("/api/auth/login", (request, response) => {
   const accounts = loadFacilitatorAccounts();
   const account = findFacilitatorAccount(accounts, loginId);
 
-  if (!account || !account.isActive || !verifyPassword(password, account.passwordHash)) {
+  if (!account) {
+    response.status(401).json({ ok: false, message: "ログインIDまたはパスワードが正しくありません。" });
+    return;
+  }
+  if (!account.isActive) {
+    response.status(403).json({ ok: false, message: "このアカウントは停止中です。管理人が再開してください。" });
+    return;
+  }
+  if (!verifyPassword(password, account.passwordHash)) {
     response.status(401).json({ ok: false, message: "ログインIDまたはパスワードが正しくありません。" });
     return;
   }
@@ -167,7 +175,15 @@ app.post("/api/auth/key-login", (request, response) => {
   const accounts = loadFacilitatorAccounts();
   const account = findFacilitatorAccountByAccessKey(accounts, accessKey);
 
-  if (!account || !account.isActive || !verifyPassword(password, account.passwordHash)) {
+  if (!account) {
+    response.status(401).json({ ok: false, message: "URLキーまたはパスワードが正しくありません。" });
+    return;
+  }
+  if (!account.isActive) {
+    response.status(403).json({ ok: false, message: "このアカウントは停止中です。管理人が再開してください。" });
+    return;
+  }
+  if (!verifyPassword(password, account.passwordHash)) {
     response.status(401).json({ ok: false, message: "URLキーまたはパスワードが正しくありません。" });
     return;
   }
@@ -307,7 +323,12 @@ app.post("/api/facilitators/:loginId/reset-password", (request, response) => {
   }
 
   const updatedAccounts = accounts.map((entry) =>
-    entry.loginId === account.loginId ? updateFacilitatorPassword(entry, temporaryPassword, true) : entry,
+    entry.loginId === account.loginId
+      ? {
+          ...updateFacilitatorPassword(entry, temporaryPassword, true),
+          isActive: true,
+        }
+      : entry,
   );
   saveFacilitatorAccounts(updatedAccounts);
   response.json({ ok: true });
