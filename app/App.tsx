@@ -186,6 +186,7 @@ export const App = () => {
   const canDrawLottery = !room.started && Boolean(lotteryPlayerId) && !lotteryEntry && demoLotteryTarget?.isBot !== true;
 
   if (room.endedAt) {
+    const endedRoomSlot: "a" | "b" | null = room.roomSlot === "a" || room.roomSlot === "b" ? room.roomSlot : null;
     return (
       <main className="app-shell">
         <section className="panel waiting-panel">
@@ -194,6 +195,11 @@ export const App = () => {
           <p>ルームを閉じました。ご参加ありがとうございました。</p>
           <p>{room.endedByName ? `${room.endedByName} がゲームを終了しました。` : "ゲームを終了しました。"}</p>
           <div className="inline-actions">
+            {isFacilitator && endedRoomSlot ? (
+              <button type="button" onClick={() => void openFacilitatorRoom(endedRoomSlot)}>
+                ルームに戻る
+              </button>
+            ) : null}
             <button type="button" className="secondary" onClick={() => window.open(printGuideUrl, "_blank", "noopener,noreferrer")}>
               印刷用資料
             </button>
