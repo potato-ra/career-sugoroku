@@ -7,6 +7,14 @@ export interface FacilitatorAuthUser {
   displayName: string;
   role: "admin" | "facilitator";
   mustChangePassword: boolean;
+  accessKeys?: {
+    primary: string;
+    backup: string;
+  };
+  fixedRooms?: {
+    a: string;
+    b: string;
+  };
 }
 
 export interface FacilitatorAccountSummary {
@@ -208,7 +216,9 @@ export const useFacilitatorAuth = () => {
     if (!response.ok) {
       return null;
     }
-    const payload = (await response.json()) as { facilitator: { loginId: string; displayName: string } };
+    const payload = (await response.json()) as {
+      facilitator: { loginId: string; displayName: string; rooms: { a: string; b: string } };
+    };
     return payload.facilitator;
   };
 

@@ -74,7 +74,7 @@ npm run dev
 
 - 管理人ページ: `/admin`
 - ファシリページ: `/facilitator` または `/facilitator/<URLキー>`
-- プレイヤーページ: `/player` または `/player/<URLキー>?room=<ルームID>`
+- プレイヤーページ: `/player` または `/player/<URLキー>/<a|b>`
 - ルート `/` にアクセスすると、3つの入口リンクが表示されます
 
 ## ファシリアカウント発行
@@ -86,6 +86,8 @@ npm run dev
 - 管理者画面ではファシリごとの `最終ログイン日時` も確認できます
 - 各ファシリには `Primary URLキー / Backup URLキー` の2本を発行します
 - 管理者画面から `Primary / Backup` それぞれ個別に再発行できます
+- ファシリはログイン後、固定ルーム `A / B` のどちらかを選んで入室します
+- プレイヤーは共有URLを開くと、ルームID入力なしで対象ルーム（A/B）へ参加できます
 - ローカル開発では `data/facilitator_accounts.json` を使います
 
 ## Render公開

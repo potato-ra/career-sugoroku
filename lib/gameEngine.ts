@@ -190,6 +190,7 @@ const buildPromptResolution = (
 
 export const createRoomState = (roomId: string, board: BoardSpace[], boardVersion: string, isDemoMode = false): RoomState => ({
   roomId,
+  roomSlot: null,
   boardVersion,
   players: [],
   turnOrderRolls: [],
@@ -201,6 +202,7 @@ export const createRoomState = (roomId: string, board: BoardSpace[], boardVersio
   board,
   logs: [createLog(`ルーム ${roomId} を作成しました`)],
   facilitatorId: null,
+  facilitatorLoginId: null,
   facilitatorName: null,
   facilitatorSocketId: null,
   activeResolution: null,

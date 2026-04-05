@@ -10,6 +10,7 @@ import {
   facilitatorAccountsPath,
   findFacilitatorAccountByAccessKey,
   findFacilitatorAccount,
+  getFacilitatorRoomId,
   loadFacilitatorAccounts,
   markFacilitatorLastLogin,
   regenerateFacilitatorAccessKey,
@@ -100,12 +101,20 @@ const createSessionPayload = (token: string) => {
   }
 
   const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, session.loginId);
   return {
     user: {
       loginId: session.loginId,
       displayName: session.displayName,
       role: session.role,
       mustChangePassword: session.mustChangePassword,
+      accessKeys: account?.accessKeys,
+      fixedRooms: session.role === "facilitator" || session.role === "admin"
+        ? {
+            a: getFacilitatorRoomId(session.loginId, "a"),
+            b: getFacilitatorRoomId(session.loginId, "b"),
+          }
+        : undefined,
     },
     accounts: session.role === "admin" ? accounts.map(sanitizeFacilitatorAccount) : undefined,
   };
@@ -351,6 +360,10 @@ app.get("/api/facilitator-links/:accessKey", (request, response) => {
     facilitator: {
       loginId: account.loginId,
       displayName: account.displayName,
+      rooms: {
+        a: getFacilitatorRoomId(account.loginId, "a"),
+        b: getFacilitatorRoomId(account.loginId, "b"),
+      },
     },
   });
 });
@@ -576,6 +589,7 @@ io.on("connection", (socket) => {
     const latestBoard = loadLatestBoardSnapshot();
 
     let room = createRoomState(trimmedRoomId, cloneBoard(latestBoard.board), latestBoard.boardVersion, Boolean(isDemoMode));
+    room.facilitatorLoginId = session.loginId;
     const facilitatorId = assignFacilitator(room, trimmedName, socket.id);
     if (room.isDemoMode) {
       room = ensureDemoLocalPlayer(room, socket.id, avatarUrl);
@@ -591,6 +605,50 @@ io.on("connection", (socket) => {
     socketRoomMap.set(socket.id, { roomId: trimmedRoomId, actorId: facilitatorId, role: "facilitator" });
     socket.join(trimmedRoomId);
     emitRoomState(trimmedRoomId, room);
+    callback?.({ ok: true, room, playerId: facilitatorId });
+  });
+
+  socket.on("room:openFacilitatorRoom", ({ slot, authToken }, callback) => {
+    const session = getSessionByToken(authToken);
+    const normalizedSlot: "a" | "b" | null = slot === "b" ? "b" : slot === "a" ? "a" : null;
+    if (!session || !normalizedSlot) {
+      callback?.({ ok: false, message: "ファシリログインとルーム種別が必要です。" });
+      return;
+    }
+
+    const roomId = getFacilitatorRoomId(session.loginId, normalizedSlot);
+    const existingRoom = rooms.get(roomId);
+    if (existingRoom) {
+      if (existingRoom.facilitatorLoginId && existingRoom.facilitatorLoginId !== session.loginId) {
+        callback?.({ ok: false, message: "この固定ルームは別のファシリが利用中です。" });
+        return;
+      }
+
+      clearReconnectTimer(existingRoom.facilitatorId ?? "");
+      const nextRoom = {
+        ...existingRoom,
+        roomSlot: normalizedSlot,
+        facilitatorLoginId: session.loginId,
+        facilitatorSocketId: socket.id,
+        logs: [createLog("ファシリテーターが固定ルームへ入りました。"), ...existingRoom.logs],
+      };
+      rooms.set(roomId, nextRoom);
+      socketRoomMap.set(socket.id, { roomId, actorId: nextRoom.facilitatorId ?? "", role: "facilitator" });
+      socket.join(roomId);
+      emitRoomState(roomId, nextRoom);
+      callback?.({ ok: true, room: nextRoom, playerId: nextRoom.facilitatorId });
+      return;
+    }
+
+    const latestBoard = loadLatestBoardSnapshot();
+    let room = createRoomState(roomId, cloneBoard(latestBoard.board), latestBoard.boardVersion, false);
+    room.roomSlot = normalizedSlot;
+    room.facilitatorLoginId = session.loginId;
+    const facilitatorId = assignFacilitator(room, session.displayName, socket.id);
+    rooms.set(roomId, room);
+    socketRoomMap.set(socket.id, { roomId, actorId: facilitatorId, role: "facilitator" });
+    socket.join(roomId);
+    emitRoomState(roomId, room);
     callback?.({ ok: true, room, playerId: facilitatorId });
   });
 

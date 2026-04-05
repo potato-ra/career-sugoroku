@@ -21,6 +21,7 @@ export const App = () => {
   const pageVariant: "admin" | "facilitator" | "player" =
     pathSegments[0] === "admin" ? "admin" : pathSegments[0] === "player" ? "player" : "facilitator";
   const pageAccessKey = (pathSegments[1] || "").trim();
+  const pageFixedSlot = pathSegments[2] === "b" ? "b" : pathSegments[2] === "a" ? "a" : undefined;
   const query = new URLSearchParams(window.location.search);
   const sharedRoomId = (query.get("room") || "").toUpperCase();
   const {
@@ -30,6 +31,7 @@ export const App = () => {
     errorMessage,
     createRoom,
     joinRoom,
+    openFacilitatorRoom,
     startGame,
     rollDice,
     endTurn,
@@ -45,9 +47,25 @@ export const App = () => {
     undoStrengthGift,
     runDeveloperAction,
   } = useGameSocket(facilitatorAuth.authToken);
+  const [resolvedInvite, setResolvedInvite] = useState<{ displayName: string; rooms: { a: string; b: string } } | null>(null);
   const [viewMode, setViewMode] = useState<"facilitator" | "player">("facilitator");
   const [selectedPlayerId, setSelectedPlayerId] = useState("");
   const [helpMode, setHelpMode] = useState<"rules" | "strengths" | null>(null);
+
+  useEffect(() => {
+    if (pageVariant !== "player" || !pageAccessKey) {
+      setResolvedInvite(null);
+      return;
+    }
+
+    void facilitatorAuth.resolveFacilitatorByAccessKey(pageAccessKey).then((result) => {
+      if (!result) {
+        setResolvedInvite(null);
+        return;
+      }
+      setResolvedInvite({ displayName: result.displayName, rooms: result.rooms });
+    });
+  }, [facilitatorAuth, pageAccessKey, pageVariant]);
 
   useEffect(() => {
     if (!room) {
@@ -99,7 +117,7 @@ export const App = () => {
               <button type="button" onClick={() => window.location.assign("/admin")}>
                 管理人ページ
               </button>
-              <button type="button" onClick={() => window.location.assign("/facilitator")}>
+        <button type="button" onClick={() => window.location.assign("/facilitator")}>
                 ファシリページ
               </button>
               <button type="button" onClick={() => window.location.assign("/player")}>
@@ -115,7 +133,15 @@ export const App = () => {
       <Lobby
         variant={pageVariant}
         accessKey={pageVariant === "facilitator" ? pageAccessKey : undefined}
-        initialRoomId={pageVariant === "player" ? sharedRoomId : undefined}
+        fixedRoomSlot={pageVariant === "player" ? pageFixedSlot : undefined}
+        initialRoomId={
+          pageVariant === "player"
+            ? resolvedInvite && pageFixedSlot
+              ? resolvedInvite.rooms[pageFixedSlot]
+              : sharedRoomId || undefined
+            : undefined
+        }
+        onOpenFacilitatorRoom={openFacilitatorRoom}
         onCreateRoom={createRoom}
         onJoinRoom={joinRoom}
         authUser={facilitatorAuth.authUser}
@@ -129,7 +155,7 @@ export const App = () => {
         onCreateFacilitatorAccount={facilitatorAuth.createAccount}
         onResetFacilitatorPassword={facilitatorAuth.resetPassword}
         onRegenerateAccessLink={facilitatorAuth.regenerateAccessLink}
-        inviterName={undefined}
+        inviterName={resolvedInvite?.displayName}
         errorMessage={errorMessage}
       />
     );
@@ -227,10 +253,10 @@ export const App = () => {
             </button>
           </div>
           <div className="facilitator-badge">{isFacilitator ? "ファシリ操作権あり" : "プレイヤーはサイコロのみ操作"}</div>
-          {isFacilitator && facilitatorAuth.authAccessKey ? (
+          {isFacilitator && facilitatorAuth.authUser?.accessKeys ? (
             <div className="panel" style={{ maxWidth: 520 }}>
               <p className="mode-caption">プレイヤー招待URL</p>
-              <p>{`${window.location.origin}/player/${facilitatorAuth.authAccessKey}?room=${room.roomId}`}</p>
+              <p>{`${window.location.origin}/player/${facilitatorAuth.authUser.accessKeys.primary}/${room.roomSlot ?? "a"}`}</p>
             </div>
           ) : null}
           <div className="inline-actions action-button-row">

@@ -158,6 +158,24 @@ export const useGameSocket = (authToken?: string | null) => {
     return response;
   };
 
+  const openFacilitatorRoom = async (slot: "a" | "b") => {
+    const response = await emitWithAck<ActionResult>("room:openFacilitatorRoom", { slot, authToken });
+    if (response.ok && response.playerId && response.room) {
+      setPlayerId(response.playerId);
+      setErrorMessage("");
+      setRoom(response.room);
+      persistSession({
+        roomId: response.room.roomId,
+        actorId: response.playerId,
+        role: "facilitator",
+        name: response.room.facilitatorName ?? "",
+      });
+    } else {
+      setErrorMessage(response.message ?? "固定ルームへの入室に失敗しました。");
+    }
+    return response;
+  };
+
   const startGame = async () => {
     if (!room || !playerId) {
       return;
@@ -366,6 +384,7 @@ export const useGameSocket = (authToken?: string | null) => {
     errorMessage,
     createRoom,
     joinRoom,
+    openFacilitatorRoom,
     startGame,
     rollDice,
     endTurn,

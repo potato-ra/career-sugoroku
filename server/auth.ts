@@ -191,6 +191,7 @@ export const markFacilitatorLastLogin = (account: FacilitatorAccountRecord): Fac
 
 export const normalizeFacilitatorLoginId = normalizeLoginId;
 export const facilitatorAccountsPath = () => getAccountsPath();
+export const getFacilitatorRoomId = (loginId: string, slot: "a" | "b") => `FACI_${normalizeLoginId(loginId).toUpperCase()}_${slot.toUpperCase()}`;
 export const findFacilitatorAccountByAccessKey = (accounts: FacilitatorAccountRecord[], accessKey: string) =>
   accounts.find(
     (account) =>

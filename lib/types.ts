@@ -87,6 +87,7 @@ export interface TurnOrderRoll {
 
 export interface RoomState {
   roomId: string;
+  roomSlot: "a" | "b" | null;
   boardVersion: string;
   players: Player[];
   turnOrderRolls: TurnOrderRoll[];
@@ -98,6 +99,7 @@ export interface RoomState {
   board: BoardSpace[];
   logs: GameLog[];
   facilitatorId: string | null;
+  facilitatorLoginId: string | null;
   facilitatorName: string | null;
   facilitatorSocketId: string | null;
   activeResolution: TurnResolution | null;
