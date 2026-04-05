@@ -37,6 +37,7 @@ interface LobbyProps {
   onCreateFacilitatorAccount: (loginId: string, displayName: string, temporaryPassword: string) => Promise<void>;
   onResetFacilitatorPassword: (loginId: string, temporaryPassword: string) => Promise<void>;
   onRegenerateAccessLink: (loginId: string, slot: "primary" | "backup") => Promise<void>;
+  onSetFacilitatorActive: (loginId: string, isActive: boolean) => Promise<void>;
   errorMessage?: string;
 }
 
@@ -60,6 +61,7 @@ export const Lobby = ({
   onCreateFacilitatorAccount,
   onResetFacilitatorPassword,
   onRegenerateAccessLink,
+  onSetFacilitatorActive,
   errorMessage,
 }: LobbyProps) => {
   const [joinName, setJoinName] = useState("");
@@ -378,6 +380,7 @@ export const Lobby = ({
                     <div key={account.loginId} className="account-row">
                       <strong>{account.displayName}</strong>
                       <span>{account.loginId}</span>
+                      <span>{account.isActive ? "利用中" : "停止中"}</span>
                       <span>Primary: {account.accessKeys.primary}</span>
                       <span>Backup: {account.accessKeys.backup}</span>
                       <div className="inline-actions">
@@ -386,6 +389,13 @@ export const Lobby = ({
                         </button>
                         <button type="button" className="secondary" onClick={() => void onRegenerateAccessLink(account.loginId, "backup")}>
                           Backup URL再発行
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary"
+                          onClick={() => void onSetFacilitatorActive(account.loginId, !account.isActive)}
+                        >
+                          {account.isActive ? "停止" : "再開"}
                         </button>
                       </div>
                     </div>

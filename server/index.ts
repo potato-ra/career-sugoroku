@@ -341,6 +341,41 @@ app.post("/api/facilitators/:loginId/regenerate-link", (request, response) => {
   response.json({ ok: true });
 });
 
+app.post("/api/facilitators/:loginId/set-active", (request, response) => {
+  const session = requireAdminSession(getBearerToken(request));
+  if (!session) {
+    response.status(403).json({ ok: false, message: "管理者のみ状態変更できます。" });
+    return;
+  }
+
+  const loginId = String(request.params.loginId ?? "").trim().toLowerCase();
+  const isActive = request.body?.isActive;
+  if (!loginId || typeof isActive !== "boolean") {
+    response.status(400).json({ ok: false, message: "対象アカウントと有効状態を指定してください。" });
+    return;
+  }
+
+  const accounts = loadFacilitatorAccounts();
+  const account = findFacilitatorAccount(accounts, loginId);
+  if (!account) {
+    response.status(404).json({ ok: false, message: "対象アカウントが見つかりません。" });
+    return;
+  }
+
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId
+      ? {
+          ...entry,
+          isActive,
+          updatedAt: new Date().toISOString(),
+        }
+      : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+
+  response.json({ ok: true });
+});
+
 app.get("/api/facilitator-links/:accessKey", (request, response) => {
   const accessKey = String(request.params.accessKey ?? "").trim();
   if (!accessKey) {

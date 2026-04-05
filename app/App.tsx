@@ -155,6 +155,7 @@ export const App = () => {
         onCreateFacilitatorAccount={facilitatorAuth.createAccount}
         onResetFacilitatorPassword={facilitatorAuth.resetPassword}
         onRegenerateAccessLink={facilitatorAuth.regenerateAccessLink}
+        onSetFacilitatorActive={facilitatorAuth.setAccountActive}
         inviterName={resolvedInvite?.displayName}
         errorMessage={errorMessage}
       />

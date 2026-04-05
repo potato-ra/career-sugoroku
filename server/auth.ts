@@ -39,6 +39,8 @@ const FALLBACK_RUNTIME_ACCOUNTS_PATH = "/tmp/facilitator_accounts.json";
 const CONFIGURED_ACCOUNTS_PATH =
   process.env.FACILITATOR_ACCOUNTS_PATH ||
   (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_ACCOUNTS_PATH : SEEDED_ACCOUNTS_PATH);
+const STRICT_PERSISTENCE =
+  process.env.FACILITATOR_STRICT_PERSISTENCE === "false" ? false : process.env.NODE_ENV === "production";
 let resolvedAccountsPath: string | null = null;
 
 const readAccountsSafely = (pathToRead: string): FacilitatorAccountRecord[] | null => {
@@ -116,6 +118,17 @@ const getAccountsPath = () => {
     resolvedAccountsPath = CONFIGURED_ACCOUNTS_PATH;
     return resolvedAccountsPath;
   } catch (error) {
+    if (STRICT_PERSISTENCE) {
+      console.error("[auth] strict persistence is enabled. refusing volatile fallback.", {
+        configuredPath: CONFIGURED_ACCOUNTS_PATH,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      throw new Error(
+        `Facilitator account storage is not writable at ${CONFIGURED_ACCOUNTS_PATH}. ` +
+          "Attach a persistent disk and/or set FACILITATOR_ACCOUNTS_PATH.",
+      );
+    }
+
     console.error("[auth] facilitator account path init failed", {
       configuredPath: CONFIGURED_ACCOUNTS_PATH,
       message: error instanceof Error ? error.message : String(error),

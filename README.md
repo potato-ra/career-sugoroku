@@ -104,7 +104,8 @@ Render の設定値:
 - Persistent Disk を使う場合は、マウント先を `/var/data` にしてください
 - 必要なら環境変数 `FACILITATOR_ACCOUNTS_PATH` で保存先 JSON を明示できます
 - 本番ではデフォルトで `/var/data/facilitator_accounts.json` を使います
-- `/var/data` が使えない環境では `/tmp/facilitator_accounts.json` に自動フォールバックします（永続化はされません）
+- 本番では `FACILITATOR_STRICT_PERSISTENCE=true`（既定）で、永続保存先が使えない場合は起動を停止します
+- `FACILITATOR_STRICT_PERSISTENCE=false` にすると `/tmp/facilitator_accounts.json` へフォールバックします（再起動や再デプロイで消えるため非推奨）
 - `/var/data` に永続ディスクを付けていない場合、再デプロイや再起動でファシリアカウント情報が失われることがあります
 
 ## 遊び方

@@ -211,6 +211,14 @@ export const useFacilitatorAuth = () => {
     await refreshAccounts();
   };
 
+  const setAccountActive = async (loginId: string, isActive: boolean) => {
+    await authorizedFetch(`/api/facilitators/${encodeURIComponent(loginId)}/set-active`, {
+      method: "POST",
+      body: JSON.stringify({ isActive }),
+    });
+    await refreshAccounts();
+  };
+
   const resolveFacilitatorByAccessKey = async (accessKey: string) => {
     const response = await fetch(`${getApiBase()}/api/facilitator-links/${encodeURIComponent(accessKey)}`);
     if (!response.ok) {
@@ -236,6 +244,7 @@ export const useFacilitatorAuth = () => {
     createAccount,
     resetPassword,
     regenerateAccessLink,
+    setAccountActive,
     resolveFacilitatorByAccessKey,
     refreshAccounts,
   };
