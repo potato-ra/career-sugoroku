@@ -89,6 +89,25 @@ export const Lobby = ({
     });
   };
 
+  const generateNextFacilitatorId = () => {
+    const existingNumbers = facilitatorAccounts
+      .map((account) => {
+        const match = account.loginId.match(/^faci(\d{3})$/);
+        return match ? Number(match[1]) : null;
+      })
+      .filter((value): value is number => value !== null)
+      .sort((left, right) => left - right);
+
+    const nextNumber = existingNumbers.length > 0 ? existingNumbers[existingNumbers.length - 1] + 1 : 1;
+    return `faci${String(nextNumber).padStart(3, "0")}`;
+  };
+
+  const generateTemporaryPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_-+=";
+    const length = 10;
+    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  };
+
   return (
     <section className="lobby-shell">
       <div className="hero-card">
@@ -269,20 +288,40 @@ export const Lobby = ({
 
                 <h3>ファシリアカウント管理</h3>
                 <label>
-                  新しいログインID
-                  <input value={newFacilitatorLoginId} onChange={(event) => setNewFacilitatorLoginId(event.target.value)} />
-                </label>
-                <label>
                   表示名
                   <input value={newFacilitatorDisplayName} onChange={(event) => setNewFacilitatorDisplayName(event.target.value)} />
                 </label>
-                <label>
-                  仮パスワード
-                  <input value={newTemporaryPassword} onChange={(event) => setNewTemporaryPassword(event.target.value)} />
-                </label>
+                <div className="inline-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewFacilitatorLoginId(generateNextFacilitatorId());
+                      setNewTemporaryPassword(generateTemporaryPassword());
+                      setAccountMessage("IDと仮パスワードを自動生成しました。");
+                    }}
+                  >
+                    ファシリアカウント新規発行
+                  </button>
+                </div>
+                {newFacilitatorLoginId ? (
+                  <div className="account-row">
+                    <strong>発行予定ID</strong>
+                    <span>{newFacilitatorLoginId}</span>
+                    <strong>仮パスワード</strong>
+                    <span>{newTemporaryPassword}</span>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   onClick={async () => {
+                    if (!newFacilitatorDisplayName.trim()) {
+                      setAccountMessage("表示名を入力してください。");
+                      return;
+                    }
+                    if (!newFacilitatorLoginId || !newTemporaryPassword) {
+                      setAccountMessage("先に「ファシリアカウント新規発行」でIDと仮パスワードを生成してください。");
+                      return;
+                    }
                     await onCreateFacilitatorAccount(newFacilitatorLoginId, newFacilitatorDisplayName, newTemporaryPassword);
                     setNewFacilitatorLoginId("");
                     setNewFacilitatorDisplayName("");
