@@ -83,25 +83,34 @@ const getAccountsPath = () => {
   const candidateAccounts = candidatePaths
     .map((candidatePath) => ({ path: candidatePath, accounts: readAccountsSafely(candidatePath) }))
     .filter((entry): entry is { path: string; accounts: FacilitatorAccountRecord[] } => Array.isArray(entry.accounts));
-  const richestCandidate = candidateAccounts.reduce<{ path: string; accounts: FacilitatorAccountRecord[] } | null>(
-    (best, current) => {
-      if (!best || current.accounts.length > best.accounts.length) {
-        return current;
+
+  const mergedAccountsMap = new Map<string, FacilitatorAccountRecord>();
+  candidateAccounts.forEach((entry) => {
+    entry.accounts.forEach((account) => {
+      const existing = mergedAccountsMap.get(account.loginId);
+      if (!existing) {
+        mergedAccountsMap.set(account.loginId, account);
+        return;
       }
-      return best;
-    },
-    null,
-  );
+
+      const existingTime = new Date(existing.updatedAt).getTime();
+      const currentTime = new Date(account.updatedAt).getTime();
+      if (Number.isFinite(currentTime) && (!Number.isFinite(existingTime) || currentTime >= existingTime)) {
+        mergedAccountsMap.set(account.loginId, account);
+      }
+    });
+  });
+  const mergedAccounts = [...mergedAccountsMap.values()];
 
   try {
     initializeAccountsFile(CONFIGURED_ACCOUNTS_PATH);
     const configuredAccounts = readAccountsSafely(CONFIGURED_ACCOUNTS_PATH) ?? [];
-    if (richestCandidate && richestCandidate.accounts.length > configuredAccounts.length) {
-      writeFileSync(CONFIGURED_ACCOUNTS_PATH, JSON.stringify(richestCandidate.accounts, null, 2), "utf-8");
-      console.warn("[auth] migrated richer facilitator account store", {
-        from: richestCandidate.path,
+    if (mergedAccounts.length > configuredAccounts.length) {
+      writeFileSync(CONFIGURED_ACCOUNTS_PATH, JSON.stringify(mergedAccounts, null, 2), "utf-8");
+      console.warn("[auth] merged facilitator account stores", {
+        sources: candidateAccounts.map((entry) => `${entry.path}(${entry.accounts.length})`),
         to: CONFIGURED_ACCOUNTS_PATH,
-        count: richestCandidate.accounts.length,
+        count: mergedAccounts.length,
       });
     }
     resolvedAccountsPath = CONFIGURED_ACCOUNTS_PATH;
