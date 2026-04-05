@@ -333,7 +333,14 @@ export const Lobby = ({
                 </button>
                 <label>
                   再発行対象
-                  <select value={resetTargetLoginId} onChange={(event) => setResetTargetLoginId(event.target.value)}>
+                  <select
+                    value={resetTargetLoginId}
+                    onChange={(event) => {
+                      const nextLoginId = event.target.value;
+                      setResetTargetLoginId(nextLoginId);
+                      setResetTemporaryPassword(nextLoginId ? generateTemporaryPassword() : "");
+                    }}
+                  >
                     <option value="">選択してください</option>
                     {facilitatorAccounts.map((account) => (
                       <option key={account.loginId} value={account.loginId}>
@@ -342,22 +349,28 @@ export const Lobby = ({
                     ))}
                   </select>
                 </label>
-                <label>
-                  新しい仮パスワード
-                  <input value={resetTemporaryPassword} onChange={(event) => setResetTemporaryPassword(event.target.value)} />
-                </label>
+                {resetTargetLoginId ? (
+                  <div className="account-row">
+                    <strong>再発行する仮パスワード</strong>
+                    <span>{resetTemporaryPassword}</span>
+                  </div>
+                ) : null}
                 <button
                   type="button"
                   className="secondary"
                   onClick={async () => {
+                    if (!resetTargetLoginId || !resetTemporaryPassword) {
+                      setAccountMessage("再発行対象を選択してください。");
+                      return;
+                    }
                     await onResetFacilitatorPassword(resetTargetLoginId, resetTemporaryPassword);
                     setResetTargetLoginId("");
                     setResetTemporaryPassword("");
-                    setAccountMessage("仮パスワードを再発行しました。");
+                    setAccountMessage("仮パスワードを自動生成して再発行しました。");
                   }}
                   disabled={!resetTargetLoginId}
                 >
-                  仮パスワード再発行
+                  仮パスワード再発行（自動生成）
                 </button>
 
                 <div className="account-list">
