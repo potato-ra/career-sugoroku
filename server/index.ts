@@ -67,7 +67,7 @@ console.log("cwd:", process.cwd());
 console.log("distPath:", distPath);
 console.log("indexPath:", indexPath);
 console.log("indexExists:", fs.existsSync(indexPath));
-console.log("facilitatorAccountsPath:", facilitatorAccountsPath);
+console.log("facilitatorAccountsPath:", facilitatorAccountsPath());
 
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.url}`);
@@ -353,6 +353,16 @@ app.get("/api/facilitator-links/:accessKey", (request, response) => {
       displayName: account.displayName,
     },
   });
+});
+
+app.use((error: unknown, request: express.Request, response: express.Response, next: express.NextFunction) => {
+  if (!request.path.startsWith("/api/")) {
+    next(error);
+    return;
+  }
+
+  console.error("[api-error]", request.method, request.path, error);
+  response.status(500).json({ ok: false, message: "サーバーエラーが発生しました。" });
 });
 
 app.get("/health", (_req, res) => {

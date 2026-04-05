@@ -35,27 +35,51 @@ export interface FacilitatorAccountSummary {
 
 const SEEDED_ACCOUNTS_PATH = resolve(process.cwd(), "data/facilitator_accounts.json");
 const DEFAULT_PRODUCTION_ACCOUNTS_PATH = "/var/data/facilitator_accounts.json";
-const ACCOUNTS_PATH =
+const FALLBACK_RUNTIME_ACCOUNTS_PATH = "/tmp/facilitator_accounts.json";
+const CONFIGURED_ACCOUNTS_PATH =
   process.env.FACILITATOR_ACCOUNTS_PATH ||
   (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_ACCOUNTS_PATH : SEEDED_ACCOUNTS_PATH);
+let resolvedAccountsPath: string | null = null;
 
-const ensureFacilitatorAccountsFile = () => {
-  const parentDirectory = dirname(ACCOUNTS_PATH);
+const initializeAccountsFile = (pathToUse: string) => {
+  const parentDirectory = dirname(pathToUse);
   if (!existsSync(parentDirectory)) {
     mkdirSync(parentDirectory, { recursive: true });
   }
 
-  if (existsSync(ACCOUNTS_PATH)) {
+  if (existsSync(pathToUse)) {
     return;
   }
 
   if (existsSync(SEEDED_ACCOUNTS_PATH)) {
     const seededAccounts = readFileSync(SEEDED_ACCOUNTS_PATH, "utf-8");
-    writeFileSync(ACCOUNTS_PATH, seededAccounts, "utf-8");
+    writeFileSync(pathToUse, seededAccounts, "utf-8");
     return;
   }
 
-  writeFileSync(ACCOUNTS_PATH, "[]", "utf-8");
+  writeFileSync(pathToUse, "[]", "utf-8");
+};
+
+const getAccountsPath = () => {
+  if (resolvedAccountsPath) {
+    return resolvedAccountsPath;
+  }
+
+  try {
+    initializeAccountsFile(CONFIGURED_ACCOUNTS_PATH);
+    resolvedAccountsPath = CONFIGURED_ACCOUNTS_PATH;
+    return resolvedAccountsPath;
+  } catch (error) {
+    console.error("[auth] facilitator account path init failed", {
+      configuredPath: CONFIGURED_ACCOUNTS_PATH,
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  initializeAccountsFile(FALLBACK_RUNTIME_ACCOUNTS_PATH);
+  resolvedAccountsPath = FALLBACK_RUNTIME_ACCOUNTS_PATH;
+  console.warn("[auth] using fallback facilitator account path", resolvedAccountsPath);
+  return resolvedAccountsPath;
 };
 
 const normalizeLoginId = (value: string) => value.trim().toLowerCase();
@@ -91,9 +115,9 @@ export const verifyPassword = (password: string, passwordHash: string) => {
 };
 
 export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
-  ensureFacilitatorAccountsFile();
+  const accountsPath = getAccountsPath();
 
-  const raw = readFileSync(ACCOUNTS_PATH, "utf-8");
+  const raw = readFileSync(accountsPath, "utf-8");
   const parsed = JSON.parse(raw) as FacilitatorAccountRecord[];
   const upgraded = parsed.map(ensureAccountAccessKeys);
   if (JSON.stringify(parsed) !== JSON.stringify(upgraded)) {
@@ -103,8 +127,8 @@ export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
 };
 
 export const saveFacilitatorAccounts = (accounts: FacilitatorAccountRecord[]) => {
-  ensureFacilitatorAccountsFile();
-  writeFileSync(ACCOUNTS_PATH, JSON.stringify(accounts, null, 2), "utf-8");
+  const accountsPath = getAccountsPath();
+  writeFileSync(accountsPath, JSON.stringify(accounts, null, 2), "utf-8");
 };
 
 export const sanitizeFacilitatorAccount = (account: FacilitatorAccountRecord): FacilitatorAccountSummary => ({
@@ -166,7 +190,7 @@ export const markFacilitatorLastLogin = (account: FacilitatorAccountRecord): Fac
 };
 
 export const normalizeFacilitatorLoginId = normalizeLoginId;
-export const facilitatorAccountsPath = ACCOUNTS_PATH;
+export const facilitatorAccountsPath = () => getAccountsPath();
 export const findFacilitatorAccountByAccessKey = (accounts: FacilitatorAccountRecord[], accessKey: string) =>
   accounts.find(
     (account) =>
