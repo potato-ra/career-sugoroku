@@ -41,6 +41,20 @@ const CONFIGURED_ACCOUNTS_PATH =
   (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_ACCOUNTS_PATH : SEEDED_ACCOUNTS_PATH);
 let resolvedAccountsPath: string | null = null;
 
+const readAccountsSafely = (pathToRead: string): FacilitatorAccountRecord[] | null => {
+  try {
+    if (!existsSync(pathToRead)) {
+      return null;
+    }
+
+    const raw = readFileSync(pathToRead, "utf-8");
+    const parsed = JSON.parse(raw) as FacilitatorAccountRecord[];
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const initializeAccountsFile = (pathToUse: string) => {
   const parentDirectory = dirname(pathToUse);
   if (!existsSync(parentDirectory)) {
@@ -65,8 +79,31 @@ const getAccountsPath = () => {
     return resolvedAccountsPath;
   }
 
+  const candidatePaths = [...new Set([CONFIGURED_ACCOUNTS_PATH, DEFAULT_PRODUCTION_ACCOUNTS_PATH, FALLBACK_RUNTIME_ACCOUNTS_PATH])];
+  const candidateAccounts = candidatePaths
+    .map((candidatePath) => ({ path: candidatePath, accounts: readAccountsSafely(candidatePath) }))
+    .filter((entry): entry is { path: string; accounts: FacilitatorAccountRecord[] } => Array.isArray(entry.accounts));
+  const richestCandidate = candidateAccounts.reduce<{ path: string; accounts: FacilitatorAccountRecord[] } | null>(
+    (best, current) => {
+      if (!best || current.accounts.length > best.accounts.length) {
+        return current;
+      }
+      return best;
+    },
+    null,
+  );
+
   try {
     initializeAccountsFile(CONFIGURED_ACCOUNTS_PATH);
+    const configuredAccounts = readAccountsSafely(CONFIGURED_ACCOUNTS_PATH) ?? [];
+    if (richestCandidate && richestCandidate.accounts.length > configuredAccounts.length) {
+      writeFileSync(CONFIGURED_ACCOUNTS_PATH, JSON.stringify(richestCandidate.accounts, null, 2), "utf-8");
+      console.warn("[auth] migrated richer facilitator account store", {
+        from: richestCandidate.path,
+        to: CONFIGURED_ACCOUNTS_PATH,
+        count: richestCandidate.accounts.length,
+      });
+    }
     resolvedAccountsPath = CONFIGURED_ACCOUNTS_PATH;
     return resolvedAccountsPath;
   } catch (error) {
