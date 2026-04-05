@@ -76,6 +76,8 @@ npm run dev
 - ここから新しいファシリの `ログインID / 表示名 / 仮パスワード` を発行できます
 - パスワードを忘れた場合も、同じ画面から仮パスワードを再発行できます
 - 再発行されたファシリは、次回ログイン後にパスワード変更してください
+- 管理者画面ではファシリごとの `最終ログイン日時` も確認できます
+- ローカル開発では `data/facilitator_accounts.json` を使います
 
 ## Render公開
 
@@ -88,6 +90,10 @@ Render の設定値:
 
 - Build Command: `npm install && npm run build`
 - Start Command: `npm run start`
+- Persistent Disk を使う場合は、マウント先を `/var/data` にしてください
+- 必要なら環境変数 `FACILITATOR_ACCOUNTS_PATH` で保存先 JSON を明示できます
+- 本番ではデフォルトで `/var/data/facilitator_accounts.json` を使います
+- `/var/data` に永続ディスクを付けていない場合、再デプロイや再起動でファシリアカウント情報が失われることがあります
 
 ## 遊び方
 

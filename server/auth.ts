@@ -1,6 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 export interface FacilitatorAccountRecord {
   loginId: string;
@@ -9,6 +9,7 @@ export interface FacilitatorAccountRecord {
   passwordHash: string;
   isActive: boolean;
   mustChangePassword: boolean;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -19,11 +20,35 @@ export interface FacilitatorAccountSummary {
   role: "admin" | "facilitator";
   isActive: boolean;
   mustChangePassword: boolean;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
 
-const ACCOUNTS_PATH = resolve(process.cwd(), "data/facilitator_accounts.json");
+const SEEDED_ACCOUNTS_PATH = resolve(process.cwd(), "data/facilitator_accounts.json");
+const DEFAULT_PRODUCTION_ACCOUNTS_PATH = "/var/data/facilitator_accounts.json";
+const ACCOUNTS_PATH =
+  process.env.FACILITATOR_ACCOUNTS_PATH ||
+  (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_ACCOUNTS_PATH : SEEDED_ACCOUNTS_PATH);
+
+const ensureFacilitatorAccountsFile = () => {
+  const parentDirectory = dirname(ACCOUNTS_PATH);
+  if (!existsSync(parentDirectory)) {
+    mkdirSync(parentDirectory, { recursive: true });
+  }
+
+  if (existsSync(ACCOUNTS_PATH)) {
+    return;
+  }
+
+  if (existsSync(SEEDED_ACCOUNTS_PATH)) {
+    const seededAccounts = readFileSync(SEEDED_ACCOUNTS_PATH, "utf-8");
+    writeFileSync(ACCOUNTS_PATH, seededAccounts, "utf-8");
+    return;
+  }
+
+  writeFileSync(ACCOUNTS_PATH, "[]", "utf-8");
+};
 
 const normalizeLoginId = (value: string) => value.trim().toLowerCase();
 
@@ -49,15 +74,14 @@ export const verifyPassword = (password: string, passwordHash: string) => {
 };
 
 export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
-  if (!existsSync(ACCOUNTS_PATH)) {
-    return [];
-  }
+  ensureFacilitatorAccountsFile();
 
   const raw = readFileSync(ACCOUNTS_PATH, "utf-8");
   return JSON.parse(raw) as FacilitatorAccountRecord[];
 };
 
 export const saveFacilitatorAccounts = (accounts: FacilitatorAccountRecord[]) => {
+  ensureFacilitatorAccountsFile();
   writeFileSync(ACCOUNTS_PATH, JSON.stringify(accounts, null, 2), "utf-8");
 };
 
@@ -67,6 +91,7 @@ export const sanitizeFacilitatorAccount = (account: FacilitatorAccountRecord): F
   role: account.role,
   isActive: account.isActive,
   mustChangePassword: account.mustChangePassword,
+  lastLoginAt: account.lastLoginAt,
   createdAt: account.createdAt,
   updatedAt: account.updatedAt,
 });
@@ -104,4 +129,14 @@ export const updateFacilitatorPassword = (
   updatedAt: new Date().toISOString(),
 });
 
+export const markFacilitatorLastLogin = (account: FacilitatorAccountRecord): FacilitatorAccountRecord => {
+  const now = new Date().toISOString();
+  return {
+    ...account,
+    lastLoginAt: now,
+    updatedAt: now,
+  };
+};
+
 export const normalizeFacilitatorLoginId = normalizeLoginId;
+export const facilitatorAccountsPath = ACCOUNTS_PATH;

@@ -7,8 +7,10 @@ import { Server } from "socket.io";
 import { BOT_NAMES, runBotEndTurn, runBotRoll } from "../lib/botEngine";
 import {
   createFacilitatorAccountRecord,
+  facilitatorAccountsPath,
   findFacilitatorAccount,
   loadFacilitatorAccounts,
+  markFacilitatorLastLogin,
   sanitizeFacilitatorAccount,
   saveFacilitatorAccounts,
   updateFacilitatorPassword,
@@ -63,6 +65,7 @@ console.log("cwd:", process.cwd());
 console.log("distPath:", distPath);
 console.log("indexPath:", indexPath);
 console.log("indexExists:", fs.existsSync(indexPath));
+console.log("facilitatorAccountsPath:", facilitatorAccountsPath);
 
 app.use((req, _res, next) => {
   console.log(`[REQ] ${req.method} ${req.url}`);
@@ -126,12 +129,22 @@ app.post("/api/auth/login", (request, response) => {
     return;
   }
 
+  const updatedAccounts = accounts.map((entry) =>
+    entry.loginId === account.loginId ? markFacilitatorLastLogin(entry) : entry,
+  );
+  saveFacilitatorAccounts(updatedAccounts);
+  const signedInAccount = findFacilitatorAccount(updatedAccounts, loginId);
+  if (!signedInAccount) {
+    response.status(500).json({ ok: false, message: "ログイン情報の更新に失敗しました。" });
+    return;
+  }
+
   const token = randomBytes(24).toString("hex");
   facilitatorSessions.set(token, {
-    loginId: account.loginId,
-    displayName: account.displayName,
-    role: account.role,
-    mustChangePassword: account.mustChangePassword,
+    loginId: signedInAccount.loginId,
+    displayName: signedInAccount.displayName,
+    role: signedInAccount.role,
+    mustChangePassword: signedInAccount.mustChangePassword,
   });
 
   response.json({ ok: true, token, ...createSessionPayload(token) });
