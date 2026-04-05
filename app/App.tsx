@@ -117,11 +117,8 @@ export const App = () => {
               <button type="button" onClick={() => window.location.assign("/admin")}>
                 管理人ページ
               </button>
-        <button type="button" onClick={() => window.location.assign("/facilitator")}>
+              <button type="button" onClick={() => window.location.assign("/facilitator")}>
                 ファシリページ
-              </button>
-              <button type="button" onClick={() => window.location.assign("/player")}>
-                プレイヤーページ
               </button>
             </div>
           </section>
