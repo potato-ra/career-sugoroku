@@ -1,6 +1,6 @@
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 
 export interface FacilitatorAccountRecord {
   loginId: string;
@@ -41,6 +41,7 @@ const CONFIGURED_ACCOUNTS_PATH =
   (process.env.NODE_ENV === "production" ? DEFAULT_PRODUCTION_ACCOUNTS_PATH : SEEDED_ACCOUNTS_PATH);
 const STRICT_PERSISTENCE =
   process.env.FACILITATOR_STRICT_PERSISTENCE === "false" ? false : process.env.NODE_ENV === "production";
+const BACKUP_KEEP_COUNT = 30;
 let resolvedAccountsPath: string | null = null;
 
 const readAccountsSafely = (pathToRead: string): FacilitatorAccountRecord[] | null => {
@@ -74,6 +75,60 @@ const initializeAccountsFile = (pathToUse: string) => {
   }
 
   writeFileSync(pathToUse, "[]", "utf-8");
+};
+
+const writeAtomic = (pathToUse: string, content: string) => {
+  const tempPath = `${pathToUse}.tmp`;
+  writeFileSync(tempPath, content, "utf-8");
+  renameSync(tempPath, pathToUse);
+};
+
+const rotateBackups = (pathToUse: string) => {
+  const backupDirectory = join(dirname(pathToUse), "accounts_backups");
+  if (!existsSync(backupDirectory)) {
+    mkdirSync(backupDirectory, { recursive: true });
+  }
+
+  if (existsSync(pathToUse)) {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const backupPath = join(backupDirectory, `${basename(pathToUse)}.${timestamp}.bak`);
+    copyFileSync(pathToUse, backupPath);
+  }
+
+  const backups = readdirSync(backupDirectory)
+    .filter((entry) => entry.startsWith(`${basename(pathToUse)}.`) && entry.endsWith(".bak"))
+    .sort((left, right) => right.localeCompare(left));
+
+  backups.slice(BACKUP_KEEP_COUNT).forEach((entry) => {
+    unlinkSync(join(backupDirectory, entry));
+  });
+};
+
+const recoverFromBackupIfNeeded = (pathToUse: string) => {
+  try {
+    const raw = readFileSync(pathToUse, "utf-8");
+    JSON.parse(raw);
+    return;
+  } catch {
+    // continue to backup recovery
+  }
+
+  const backupDirectory = join(dirname(pathToUse), "accounts_backups");
+  if (!existsSync(backupDirectory)) {
+    return;
+  }
+
+  const latestBackup = readdirSync(backupDirectory)
+    .filter((entry) => entry.startsWith(`${basename(pathToUse)}.`) && entry.endsWith(".bak"))
+    .sort((left, right) => right.localeCompare(left))[0];
+
+  if (!latestBackup) {
+    return;
+  }
+
+  const backupPath = join(backupDirectory, latestBackup);
+  copyFileSync(backupPath, pathToUse);
+  console.warn("[auth] recovered facilitator account file from backup", { backupPath, pathToUse });
 };
 
 const getAccountsPath = () => {
@@ -175,6 +230,7 @@ export const verifyPassword = (password: string, passwordHash: string) => {
 
 export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
   const accountsPath = getAccountsPath();
+  recoverFromBackupIfNeeded(accountsPath);
 
   const raw = readFileSync(accountsPath, "utf-8");
   const parsed = JSON.parse(raw) as FacilitatorAccountRecord[];
@@ -187,7 +243,8 @@ export const loadFacilitatorAccounts = (): FacilitatorAccountRecord[] => {
 
 export const saveFacilitatorAccounts = (accounts: FacilitatorAccountRecord[]) => {
   const accountsPath = getAccountsPath();
-  writeFileSync(accountsPath, JSON.stringify(accounts, null, 2), "utf-8");
+  rotateBackups(accountsPath);
+  writeAtomic(accountsPath, JSON.stringify(accounts, null, 2));
 };
 
 export const sanitizeFacilitatorAccount = (account: FacilitatorAccountRecord): FacilitatorAccountSummary => ({
